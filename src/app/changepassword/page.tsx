@@ -2,7 +2,7 @@ import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-export default function SignIn() {
+export default function ChangePassword() {
   return (
     <div className="flex h-screen w-full">
       {/* Imagem do lado esquerdo */}
@@ -19,32 +19,15 @@ export default function SignIn() {
       <div className="w-full md:w-1/2 flex flex-col justify-center items-center px-10">
         <div className="w-full max-w-sm">
           <h2 className="text-2xl font-semibold mb-4">
-            Que bom ver você novamente
+            Insira o email da sua conta
           </h2>
 
           <div className="space-y-4">
-            <Input type="email" placeholder="Email or phone number" />
-            <Input type="password" placeholder="Enter password" />
-
-            <div className="flex items-center justify-between text-sm">
-              <a
-                href="/changepassword"
-                className="text-blue-600 hover:underline"
-              >
-                Esqueceu sua senha?
-              </a>
-            </div>
+            <Input type="email" placeholder="Insira seu e-mail" />
 
             <Button className="w-full bg-blue-600 hover:bg-blue-700">
-              Entrar
+              Enviar solicitação para alteração de senha
             </Button>
-          </div>
-
-          <div className="text-center mt-4 text-sm">
-            <span>Ainda nao possui uma conta?</span>
-            <a href="/signup" className="text-blue-600 hover:underline">
-              Cadastre-se
-            </a>
           </div>
         </div>
       </div>
