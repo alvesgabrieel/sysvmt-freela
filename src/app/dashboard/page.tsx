@@ -13,7 +13,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Sidebar from "../components/sidebar";
-import { Button } from "@/components/ui/button";
+
+import DialogDemo from "../components/register-sale-dialog";
 
 const initialOrders = [
   {
@@ -105,7 +106,8 @@ export default function Dashboard() {
             </Card>
           ))}
         </div>
-        <Button className="bg-gray-800 cursor-pointer">Cadastrar venda</Button>
+
+        <DialogDemo />
 
         {/* Filtros */}
         <Card>
