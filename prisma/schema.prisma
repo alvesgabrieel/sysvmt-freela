@@ -14,10 +14,10 @@ datasource db {
 }
 
 model User {
-  id        Int   @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   email     String   @unique
   username  String   @unique
-  name      String?
+  name      String
   password  String
   type      UserType @default(USER)
   createdAt DateTime @default(now())
