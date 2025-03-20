@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, ShoppingCart, Users, Settings, ChevronDown } from "lucide-react";
+import { ChevronDown,Home, Settings, ShoppingCart, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 

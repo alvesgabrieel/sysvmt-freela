@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -10,11 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Sidebar from "../components/sidebar";
 
 import DialogDemo from "../components/register-sale-dialog";
+import Sidebar from "../components/sidebar";
 
 const initialOrders = [
   {
