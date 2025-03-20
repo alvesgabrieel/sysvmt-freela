@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import Loader from "../components/loader";
 import DialogDemo from "../components/register-sale-dialog";
 import Sidebar from "../components/sidebar";
 
@@ -60,6 +64,29 @@ export default function Dashboard() {
     hospedagem: "",
   });
 
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      router.push("/signin");
+    } else {
+      setIsAuthenticated(true);
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    router.push("/signin");
+    toast.success("Logout realizado com sucesso!");
+  };
+
+  if (!isAuthenticated) {
+    return <Loader />;
+  }
+
   const filteredOrders = initialOrders.filter((order) =>
     Object.keys(filters).every(
       (key) =>
@@ -83,6 +110,7 @@ export default function Dashboard() {
               <AvatarFallback>RP</AvatarFallback>
             </Avatar>
             <span className="font-semibold">Rogério Pereira</span>
+            <Button onClick={handleLogout}>Sair</Button>
           </div>
         </div>
 
