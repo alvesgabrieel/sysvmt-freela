@@ -2,6 +2,8 @@ import Metrics from "@/app/components/metrics";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 
+import RegisterTicketDialog from "./components/register-ticket-dialog";
+
 const Ingressos = () => {
     return ( 
         <div className="flex">
@@ -11,6 +13,7 @@ const Ingressos = () => {
                 <TopBar />
                 {/* Cards de métricas */}
                 <Metrics />
+                <RegisterTicketDialog />
                 
             </div>
         </div>

@@ -645,15 +645,16 @@ export default function RegisterSaleDialog() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="data-prevista-recebimento" className="text-right">
-                  Data prevista para o recebimento:
+                <Label htmlFor="data-nf" className="text-right w-[231px]">
+                  Data prevista para recebimento:
                 </Label>
                 <Input
-                  id="data-prevista-recebimento"
+                  id="data-nf"
                   type="date"
                   className="col-span-3"
                 />
               </div>
+
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="nt-fiscal-recebida" className="text-right">

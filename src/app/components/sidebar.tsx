@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Home, LogOut, Settings, ShoppingCart, User, Users } from "lucide-react";
+import { ChevronDown, DollarSign, FileText, Home, LogOut, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -17,7 +17,7 @@ const menuItems = [
   },
   {
     name: "Clientes",
-    icon: ShoppingCart,
+    icon: Users,
     subItems: [
       { name: "Acompanhantes", path: "/clientes/acompanhante" },
       { name: "Clientes", path: "/clientes/cliente" },
@@ -36,12 +36,12 @@ const menuItems = [
   },
   {
     name: "Relatórios",
-    icon: Users,
+    icon: FileText,
     subItems: [{ name: "Vendas", path: "/relatorios/vendas" }],
   },
   {
     name: "Comissões",
-    icon: User,
+    icon: DollarSign,
     subItems: [
       { name: "Agência", path: "/comissoes/agencia" },
       { name: "Vendedor", path: "/comissoes/vendedor" },
@@ -71,12 +71,13 @@ export default function Sidebar() {
 
   return (
     <div
-      className={`h-screen bg-[#343a40] shadow-md flex flex-col p-4 transition-all duration-300 sticky top-0 ${
-        isOpen ? "w-64" : "w-18"
-      }`}
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={handleMouseLeave}
-    >
+  className={`h-screen bg-[#343a40] shadow-md flex flex-col p-4 transition-all duration-300 sticky top-0 ${
+    isOpen ? "w-64" : "w-18"
+  } overflow-hidden`}
+  onMouseEnter={() => setIsOpen(true)}
+  onMouseLeave={handleMouseLeave}
+>
+
       <h2
         className={`text-2xl font-bold text-center mb-6 transition-all text-white ${
           isOpen ? "opacity-100" : "opacity-100"
@@ -86,7 +87,7 @@ export default function Sidebar() {
       </h2>
 
       {/* Menu de Navegação */}
-      <nav className="flex-1 space-y-4 overflow-y-auto">
+      <nav className="flex-1 space-y-4 overflow-hidden group-hover:overflow-y-auto">
         {menuItems.map((item) => (
           <div key={item.name}>
             <button

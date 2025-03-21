@@ -2,6 +2,8 @@ import Metrics from "@/app/components/metrics";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 
+import RegisterCompanionDialog from "./components/register-client-dialog";
+
 const Cliente = () => {
     return ( 
         <div className="flex">
@@ -11,6 +13,7 @@ const Cliente = () => {
                 <TopBar />
                 {/* Cards de métricas */}
                 <Metrics />
+                <RegisterCompanionDialog />
                 
             </div>
         </div>
