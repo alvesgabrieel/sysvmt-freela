@@ -8,7 +8,9 @@ import TopBar from "@/app/components/top-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-import RegisterHostingDialog from "./components/register-provider-dialog";
+import RegisterTourOperatorDialog from "./components/register-tour-operator-dialog";
+
+
 
 const Operadoras = () => {
         const [filters, setFilters] = useState({ Id: "", nome: "", contato: "", telefone: "", email: "", site: "" }); 
@@ -21,7 +23,7 @@ const Operadoras = () => {
                 <TopBar />
                 {/* Cards de métricas */}
                 <Metrics />
-                <RegisterHostingDialog />
+                <RegisterTourOperatorDialog />
                 {/* Filtros */}
                 <Card>
                     <CardHeader>
