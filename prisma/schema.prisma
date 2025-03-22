@@ -59,7 +59,7 @@ model Saller {
   city        String
   adress      String
   number      String
-  complement  String
+  complement  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
