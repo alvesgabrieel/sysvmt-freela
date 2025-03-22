@@ -22,6 +22,73 @@ model User {
   type      UserType @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tags      Tag[]    @relation("UserTags") // Cria uma nova tabela de relacionamento N:N
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  color     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]   @relation("UserTags")
+}
+
+model Ticket {
+  id          Int      @id @default(autoincrement())
+  name        String
+  state       String
+  city        String
+  observation String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Saller {
+  id          Int      @id @default(autoincrement())
+  name        String
+  login       String   @unique
+  email       String   @unique
+  phone       String
+  cpf         String
+  rg          String
+  observation String
+  pix         String
+  photo       String?
+  state       String
+  city        String
+  adress      String
+  number      String
+  complement  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Hosting {
+  id          Int      @id @default(autoincrement())
+  name        String
+  state       String
+  city        String
+  observation String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TourOperator {
+  id                   Int      @id @default(autoincrement())
+  name                 String
+  phone                String
+  email                String   @unique
+  site                 String
+  login                String   @unique
+  password             String
+  upfrontComission     Float
+  installmentComission Float
+  state                String
+  city                 String
+  observation          String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 enum UserType {
