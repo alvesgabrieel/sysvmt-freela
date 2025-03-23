@@ -22,16 +22,41 @@ model User {
   type      UserType @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tags      Tag[]    @relation("UserTags") // Cria uma nova tabela de relacionamento N:N
+}
+
+model Client {
+  id             Int      @id @default(autoincrement())
+  name           String
+  login          String
+  cpf            String
+  dateOfBirth    String
+  email          String
+  primaryPhone   String
+  secondaryPhone String
+  state          String
+  city           String
+  tags           Tag[]    @relation("ClientTag") // Cria uma nova tabela de relacionamento N:N
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Companion {
+  id          Int      @id @default(autoincrement())
+  name        String
+  phone       String
+  email       String
+  dateOfBirth String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Tag {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   color     String
+  clients   Client[] @relation("ClientTag")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  users     User[]   @relation("UserTags")
 }
 
 model Ticket {
