@@ -54,7 +54,7 @@ model Saller {
   rg          String
   observation String?
   pix         String
-  photo       String?
+  photo       Bytes?
   state       String
   city        String
   adress      String
