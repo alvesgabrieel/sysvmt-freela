@@ -78,15 +78,13 @@ model TourOperator {
   id                   Int      @id @default(autoincrement())
   name                 String
   phone                String
+  contact              String
   email                String   @unique
   site                 String
   login                String   @unique
   password             String
   upfrontComission     Float
   installmentComission Float
-  state                String
-  city                 String
-  observation          String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

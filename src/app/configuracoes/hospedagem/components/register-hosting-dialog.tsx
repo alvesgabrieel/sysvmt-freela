@@ -100,8 +100,6 @@ const RegisterHostingDialog = () => {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Scrollable Area */}
-
         {/* Conteúdo das Abas */}
         {/* Gerais */}
         <form onSubmit={handleSubmit} className="space-y-4 p-5">
