@@ -1,5 +1,6 @@
 import { Minus, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { IMaskInput } from "react-imask"; // Importe o IMaskInput
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { fetchCitiesByState, fetchStates } from "@/services/ibge";
 
 export default function RegisterSallerDialog() {
   const [activeTab, setActiveTab] = useState("dados-basicos");
@@ -22,6 +24,46 @@ export default function RegisterSallerDialog() {
     { operadora: "", aVista: "", parcelado: "" },
   ]);
   const [file, setFile] = useState<File | null>(null);
+
+  // Estados e cidades
+  const [states, setStates] = useState<{ id: number; nome: string }[]>([]);
+  const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+
+  // Buscar estados ao carregar o componente
+  useEffect(() => {
+    const loadStates = async () => {
+      try {
+        const statesData = await fetchStates();
+        setStates(statesData);
+      } catch (error) {
+        toast.error("Erro ao buscar estados");
+        console.error(error);
+      }
+    };
+    loadStates();
+  }, []);
+
+  // Buscar cidades quando um estado é selecionado
+  useEffect(() => {
+    if (!selectedState) return;
+
+    const loadCities = async () => {
+      try {
+        const selectedStateData = states.find((s) => s.nome === selectedState);
+        if (selectedStateData) {
+          const citiesData = await fetchCitiesByState(selectedStateData.id);
+          setCities(citiesData);
+        }
+      } catch (error) {
+        toast.error("Erro ao buscar cidades");
+        console.error(error);
+        setCities([]);
+      }
+    };
+    loadCities();
+  }, [selectedState, states]);
 
   const adicionarComissao = () => {
     setComissoes([...comissoes, { operadora: "", aVista: "", parcelado: "" }]);
@@ -45,19 +87,52 @@ export default function RegisterSallerDialog() {
     const formData = new FormData();
 
     // Adiciona os campos do formulário ao FormData
-    formData.append("name", (document.getElementById("nome-vendedor") as HTMLInputElement).value);
-    formData.append("login", (document.getElementById("login") as HTMLInputElement).value);
-    formData.append("email", (document.getElementById("email") as HTMLInputElement).value);
-    formData.append("cpf", (document.getElementById("cpf") as HTMLInputElement).value);
-    formData.append("rg", (document.getElementById("rg") as HTMLInputElement).value);
-    formData.append("phone", (document.getElementById("telefone") as HTMLInputElement).value);
-    formData.append("observation", (document.getElementById("observacao") as HTMLTextAreaElement).value);
-    formData.append("pix", (document.getElementById("pix") as HTMLInputElement).value);
-    formData.append("state", (document.getElementById("estado") as HTMLSelectElement).value);
-    formData.append("city", (document.getElementById("cidade") as HTMLSelectElement).value);
-    formData.append("adress", (document.getElementById("logradouro") as HTMLInputElement).value);
-    formData.append("number", (document.getElementById("numero") as HTMLInputElement).value);
-    formData.append("complement", (document.getElementById("complemento") as HTMLInputElement).value);
+    formData.append(
+      "name",
+      (document.getElementById("nome-vendedor") as HTMLInputElement).value,
+    );
+    formData.append(
+      "login",
+      (document.getElementById("login") as HTMLInputElement).value,
+    );
+    formData.append(
+      "email",
+      (document.getElementById("email") as HTMLInputElement).value,
+    );
+    formData.append(
+      "cpf",
+      (document.getElementById("cpf") as HTMLInputElement).value,
+    );
+    formData.append(
+      "rg",
+      (document.getElementById("rg") as HTMLInputElement).value,
+    );
+    formData.append(
+      "phone",
+      (document.getElementById("telefone") as HTMLInputElement).value,
+    );
+    formData.append(
+      "observation",
+      (document.getElementById("observacao") as HTMLTextAreaElement).value,
+    );
+    formData.append(
+      "pix",
+      (document.getElementById("pix") as HTMLInputElement).value,
+    );
+    formData.append("state", selectedState);
+    formData.append("city", selectedCity);
+    formData.append(
+      "adress",
+      (document.getElementById("logradouro") as HTMLInputElement).value,
+    );
+    formData.append(
+      "number",
+      (document.getElementById("numero") as HTMLInputElement).value,
+    );
+    formData.append(
+      "complement",
+      (document.getElementById("complemento") as HTMLInputElement).value,
+    );
 
     // Adiciona a foto ao FormData, se existir
     if (file) {
@@ -77,21 +152,23 @@ export default function RegisterSallerDialog() {
         toast.success("Vendedor cadastrado com sucesso!");
 
         // Limpa o formulário após o sucesso
-        (document.getElementById("nome-vendedor") as HTMLInputElement).value = "";
+        (document.getElementById("nome-vendedor") as HTMLInputElement).value =
+          "";
         (document.getElementById("login") as HTMLInputElement).value = "";
         (document.getElementById("email") as HTMLInputElement).value = "";
         (document.getElementById("cpf") as HTMLInputElement).value = "";
         (document.getElementById("rg") as HTMLInputElement).value = "";
         (document.getElementById("telefone") as HTMLInputElement).value = "";
-        (document.getElementById("observacao") as HTMLTextAreaElement).value = "";
+        (document.getElementById("observacao") as HTMLTextAreaElement).value =
+          "";
         (document.getElementById("pix") as HTMLInputElement).value = "";
-        (document.getElementById("estado") as HTMLSelectElement).value = "";
-        (document.getElementById("cidade") as HTMLSelectElement).value = "";
+        setSelectedState("");
+        setSelectedCity("");
         (document.getElementById("logradouro") as HTMLInputElement).value = "";
         (document.getElementById("numero") as HTMLInputElement).value = "";
         (document.getElementById("complemento") as HTMLInputElement).value = "";
-        setFile(null); // Limpa a foto
-        setComissoes([{ operadora: "", aVista: "", parcelado: "" }]); // Reseta as comissões
+        setFile(null);
+        setComissoes([{ operadora: "", aVista: "", parcelado: "" }]);
       } else {
         toast.error(`Erro: ${result.error}`);
       }
@@ -115,10 +192,12 @@ export default function RegisterSallerDialog() {
         </DialogHeader>
 
         {/* Abas para Navegação */}
-        <div className="flex space-x-4 mt-4 mb-6">
+        <div className="mb-6 mt-4 flex space-x-4">
           <button
             className={`px-4 py-2 ${
-              activeTab === "dados-basicos" ? "bg-blue-500 text-white" : "bg-gray-200"
+              activeTab === "dados-basicos"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200"
             } rounded`}
             onClick={() => handleTabChange("dados-basicos")}
           >
@@ -126,7 +205,9 @@ export default function RegisterSallerDialog() {
           </button>
           <button
             className={`px-4 py-2 ${
-              activeTab === "comissoes" ? "bg-blue-500 text-white" : "bg-gray-200"
+              activeTab === "comissoes"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200"
             } rounded`}
             onClick={() => handleTabChange("comissoes")}
           >
@@ -161,19 +242,37 @@ export default function RegisterSallerDialog() {
                 <Label htmlFor="cpf" className="text-right">
                   CPF
                 </Label>
-                <Input id="cpf" type="text" className="col-span-3" />
+                <IMaskInput
+                  mask="000.000.000-00" // Máscara para CPF
+                  id="cpf"
+                  type="text"
+                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="000.000.000-00"
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="rg" className="text-right">
                   RG
                 </Label>
-                <Input id="rg" type="text" className="col-span-3" />
+                <IMaskInput
+                  mask="000.000.000" // Máscara para RG
+                  id="rg"
+                  type="text"
+                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="000.000.000"
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="telefone" className="text-right">
                   Telefone
                 </Label>
-                <Input id="telefone" type="text" className="col-span-3" />
+                <IMaskInput
+                  mask="(00) 00000-0000" // Máscara para Telefone
+                  id="telefone"
+                  type="text"
+                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="(00) 00000-0000"
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="observacao" className="text-right">
@@ -181,7 +280,7 @@ export default function RegisterSallerDialog() {
                 </Label>
                 <textarea
                   id="observacao"
-                  className="col-span-3 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={4}
                   placeholder="Digite suas observações..."
                 />
@@ -209,12 +308,17 @@ export default function RegisterSallerDialog() {
                 </Label>
                 <select
                   id="estado"
-                  className="col-span-3 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={selectedState}
+                  onChange={(e) => setSelectedState(e.target.value)}
+                  required
                 >
                   <option value="">Selecione um estado</option>
-                  <option value="1">RN</option>
-                  <option value="2">SP</option>
-                  <option value="3">RJ</option>
+                  {states.map((state) => (
+                    <option key={state.id} value={state.nome}>
+                      {state.nome}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -223,12 +327,18 @@ export default function RegisterSallerDialog() {
                 </Label>
                 <select
                   id="cidade"
-                  className="col-span-3 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value)}
+                  required
+                  disabled={!selectedState}
                 >
                   <option value="">Selecione uma cidade</option>
-                  <option value="1">Natal</option>
-                  <option value="2">São Paulo</option>
-                  <option value="3">Rio de Janeiro</option>
+                  {cities.map((city) => (
+                    <option key={city.id} value={city.nome}>
+                      {city.nome}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -261,7 +371,7 @@ export default function RegisterSallerDialog() {
                   </Label>
                   <select
                     id={`operadora-${index}`}
-                    className="p-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1"
+                    className="flex-1 rounded-md border p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Selecione uma operadora</option>
                     <option value="1">Operadora 1</option>
@@ -274,7 +384,7 @@ export default function RegisterSallerDialog() {
                   <Input
                     id={`a-vista-${index}`}
                     type="number"
-                    className="p-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-20"
+                    className="w-20 rounded-md border p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <Label htmlFor={`parcelado-${index}`} className="text-right">
                     Parcelado
@@ -282,7 +392,7 @@ export default function RegisterSallerDialog() {
                   <Input
                     id={`parcelado-${index}`}
                     type="number"
-                    className="p-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-20"
+                    className="w-20 rounded-md border p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <Button
                     variant="outline"
@@ -295,9 +405,9 @@ export default function RegisterSallerDialog() {
                     className="p-1"
                   >
                     {index === 0 && comissoes.length > 1 ? (
-                      <Minus className="w-4 h-4 text-red-500" />
+                      <Minus className="h-4 w-4 text-red-500" />
                     ) : (
-                      <Plus className="w-4 h-4" />
+                      <Plus className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
