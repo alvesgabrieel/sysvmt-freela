@@ -32,7 +32,7 @@ interface EditClientDialogProps {
   client: Client;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (updatedTicket: Client) => void;
+  onSave: (updatedClient: Client) => void;
 }
 
 export const EditClientDialog = ({
