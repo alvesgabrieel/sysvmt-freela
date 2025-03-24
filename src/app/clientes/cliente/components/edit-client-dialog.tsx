@@ -14,28 +14,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchCitiesByState, fetchStates } from "@/services/ibge"; // Importe as funções do IBGE
 
-interface Hosting {
+interface Client {
   id: number;
   name: string;
+  login: string;
+  cpf: string;
+  dateOfBirth: string;
+  email: string;
+  primaryPhone: string;
+  secondaryPhone: string;
   state: string;
   city: string;
-  observation?: string;
+  tags: [];
 }
 
-interface EditHostingDialogProps {
-  hosting: Hosting;
+interface EditClientDialogProps {
+  client: Client;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (updatedTicket: Hosting) => void;
+  onSave: (updatedTicket: Client) => void;
 }
 
-export const EditHostingDialog = ({
-  hosting,
+export const EditClientDialog = ({
+  client,
   isOpen,
   onClose,
   onSave,
-}: EditHostingDialogProps) => {
-  const [editedHosting, setEditedHosting] = useState<Hosting>(hosting);
+}: EditClientDialogProps) => {
+  const [editedClient, setEditedClient] = useState<Client>(client);
 
   const [states, setStates] = useState<
     { id: number; sigla: string; nome: string }[]
@@ -57,13 +63,13 @@ export const EditHostingDialog = ({
   }, []);
 
   useEffect(() => {
-    if (hosting.state) {
-      const selectedState = states.find((s) => s.nome === hosting.state);
+    if (client.state) {
+      const selectedState = states.find((s) => s.nome === client.state);
       if (selectedState) {
         handleStateChange(selectedState.id);
       }
     }
-  }, [hosting.state, states]);
+  }, [client.state, states]);
 
   // Busca as cidades quando um estado é selecionado
   const handleStateChange = async (stateId: number) => {
@@ -79,7 +85,7 @@ export const EditHostingDialog = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
-    setEditedHosting((prev) => ({
+    setEditedClient((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -97,26 +103,23 @@ export const EditHostingDialog = ({
 
   const handleSave = async () => {
     try {
-      const response = await fetch(
-        `/api/hosting/update?id=${editedHosting.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(editedHosting),
+      const response = await fetch(`/api/client/update?id=${editedClient.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify(editedClient),
+      });
 
       if (response.ok) {
-        onSave(editedHosting); // Atualiza o estado no frontend
+        onSave(editedClient); // Atualiza o estado no frontend
         onClose(); // Fecha o diálogo
         toast.success("Registro atualizado com sucesso");
       } else {
-        console.error("Erro ao atualizar a hospedagem");
+        console.error("Erro ao atualizar a cliente");
       }
     } catch (error) {
-      console.error("Erro ao atualizar a hospedagem:", error);
+      console.error("Erro ao atualizar a cliente:", error);
     }
   };
 
@@ -124,22 +127,71 @@ export const EditHostingDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Editar Hospedagem</DialogTitle>
+          <DialogTitle>Editar cliente</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
             <Label>Nome</Label>
             <Input
               name="name"
-              value={editedHosting.name}
+              value={editedClient.name}
               onChange={handleChange}
             />
           </div>
           <div>
+            <Label>Login</Label>
+            <Input
+              name="login"
+              value={editedClient.login}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <Label>CPF</Label>
+            <Input
+              name="cpf"
+              value={editedClient.cpf}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <Label>Data de nascimento</Label>
+            <Input
+              name="dateOfBirth"
+              value={editedClient.dateOfBirth}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <Label>E-mail</Label>
+            <Input
+              name="email"
+              value={editedClient.email}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <Label>Telefone principal</Label>
+            <Input
+              name="primaryPhone"
+              value={editedClient.primaryPhone}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <Label>Telefone secundário</Label>
+            <Input
+              name="secondaryPhone"
+              value={editedClient.secondaryPhone}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div>
             <Label>Estado</Label>
             <select
               name="state"
-              value={editedHosting.state}
+              value={editedClient.state}
               onChange={handleChange}
               className="w-full rounded border p-2"
             >
@@ -155,10 +207,10 @@ export const EditHostingDialog = ({
             <Label>Cidade</Label>
             <select
               name="city"
-              value={editedHosting.city}
+              value={editedClient.city}
               onChange={handleChange}
               className="w-full rounded border p-2"
-              disabled={!editedHosting.state} // Desabilita se nenhum estado for selecionado
+              disabled={!editedClient.state} // Desabilita se nenhum estado for selecionado
             >
               <option value="">Selecione uma cidade</option>
               {cities.map((city) => (
@@ -167,14 +219,6 @@ export const EditHostingDialog = ({
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <Label>Observação</Label>
-            <Input
-              name="observation"
-              value={editedHosting.observation || ""}
-              onChange={handleChange}
-            />
           </div>
           <div className="flex justify-end space-x-2">
             <Button variant="outline" onClick={onClose}>

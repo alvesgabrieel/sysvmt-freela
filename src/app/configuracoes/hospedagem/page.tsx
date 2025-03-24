@@ -307,7 +307,7 @@ const Hospedagem = () => {
         {/* Tabela de hospedagens */}
         <Card>
           <CardHeader>
-            <CardTitle>Ingressos Filtrados</CardTitle>
+            <CardTitle>Hospedagens Filtrados</CardTitle>
           </CardHeader>
           <CardContent>
             {hosting.length > 0 ? (
