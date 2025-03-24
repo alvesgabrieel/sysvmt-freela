@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { IMaskInput } from "react-imask"; // Adicione este import
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -91,12 +92,13 @@ const RegisterCompanionDialog = () => {
             <Label htmlFor="telefone" className="text-right">
               Telefone
             </Label>
-            <Input
+            <IMaskInput
               id="telefone"
-              type="text"
-              className="col-span-3"
+              mask="(00) 00000-0000" // Máscara para telefone (Brasil)
+              placeholder="(00) 00000-0000"
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onAccept={(value) => setPhone(value)}
               required
             />
           </div>
@@ -117,12 +119,13 @@ const RegisterCompanionDialog = () => {
             <Label htmlFor="data-nascimento" className="text-right">
               Data de nascimento
             </Label>
-            <Input
+            <IMaskInput
               id="data-nascimento"
-              type="text"
-              className="col-span-3"
+              mask="00/00/0000" // Máscara para formato de data
+              placeholder="DD/MM/AAAA"
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
+              onAccept={(value) => setDateOfBirth(value)} // Atualiza o estado corretamente
               required
             />
           </div>
