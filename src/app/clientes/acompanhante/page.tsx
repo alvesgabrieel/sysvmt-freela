@@ -7,6 +7,7 @@ import {
   TrashIcon,
 } from "lucide-react";
 import { useState } from "react";
+import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
 import Metrics from "@/app/components/metrics";
@@ -215,12 +216,15 @@ const Acompanhante = () => {
               value={filters.name || ""}
               onChange={handleFilterChange}
             />
-            <Input
-              type="text"
+            <IMaskInput
+              mask="(00) 00000-0000"
               name="phone"
               placeholder="Telefone"
               value={filters.phone || ""}
-              onChange={handleFilterChange}
+              onAccept={(value) =>
+                setFilters((prev) => ({ ...prev, phone: value }))
+              }
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
 
             <Input
@@ -231,12 +235,15 @@ const Acompanhante = () => {
               onChange={handleFilterChange}
             />
 
-            <Input
-              type="text"
-              name="data-nascimento"
+            <IMaskInput
+              mask="00/00/0000"
+              name="dateOfBirth"
               placeholder="Data de nascimento"
               value={filters.dateOfBirth || ""}
-              onChange={handleFilterChange}
+              onAccept={(value) =>
+                setFilters((prev) => ({ ...prev, dateOfBirth: value }))
+              }
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
             <Button onClick={applyFilters} variant="outline">
               Buscar
@@ -279,6 +286,7 @@ const Acompanhante = () => {
                           variant="destructive"
                           size="icon"
                           onClick={() => handleDeleteCompanion(companion.id)} // Função de exclusão
+                          className="ml-3"
                         >
                           <TrashIcon className="h-4 w-4" />
                         </Button>
