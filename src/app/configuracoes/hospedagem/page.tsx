@@ -1,6 +1,11 @@
 "use client";
 
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  EyeIcon,
+  TrashIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -20,18 +25,19 @@ import {
 } from "@/components/ui/table";
 import { fetchCitiesByState, fetchStates } from "@/services/ibge";
 
+import { EditHostingDialog } from "./components/edit-hosting-dialog";
 import RegisterHostingDialog from "./components/register-hosting-dialog";
 
+type Hosting = {
+  id: number;
+  name: string;
+  state: string;
+  city: string;
+  observation?: string; // O campo observation é opcional
+};
+
 const Hospedagem = () => {
-  const [hosting, setHosting] = useState<
-    {
-      id: number;
-      name: string;
-      state: string;
-      city: string;
-      observation: string;
-    }[]
-  >([]);
+  const [hosting, setHosting] = useState<Hosting[]>([]);
   const [filters, setFilters] = useState({
     id: "",
     name: "",
@@ -49,6 +55,31 @@ const Hospedagem = () => {
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5); // Quantos itens por página
+
+  // Adicione o estado para controlar o diálogo
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedHosting, setSelectedHosting] = useState<Hosting | null>(null);
+
+  // Função para abrir o diálogo de edição
+  const handleViewMore = (hosting: Hosting) => {
+    setSelectedHosting(hosting); // Define o ingresso selecionado
+    setIsEditDialogOpen(true); // Abre o diálogo
+  };
+
+  // Função para fechar o diálogo e limpar o estado
+  const handleCloseDialog = () => {
+    setIsEditDialogOpen(false); // Fecha o diálogo
+    setSelectedHosting(null); // Limpa o ingresso selecionado
+  };
+
+  // Função para salvar as alterações
+  const handleSaveHosting = (updatedHosting: Hosting) => {
+    setHosting((prevHosting) =>
+      prevHosting.map((hosting) =>
+        hosting.id === updatedHosting.id ? updatedHosting : hosting,
+      ),
+    );
+  };
 
   // Busca os estados ao carregar a página
   useEffect(() => {
@@ -115,6 +146,30 @@ const Hospedagem = () => {
     } catch (err) {
       toast.error("Erro ao carregar as hospedagens");
       console.error("Erro ao carregar as hospedagens", err);
+    }
+  };
+
+  const handleDeleteHosting = async (hostingId: number) => {
+    try {
+      const response = await fetch(`/api/hosting/delete?id=${hostingId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        toast.success("Hopedagem excluída com sucesso!");
+        // Atualiza a lista de ingressos após a exclusão
+        setHosting((prevHosting) =>
+          prevHosting.filter((hosting) => hosting.id !== hostingId),
+        );
+      } else {
+        toast.error("Erro ao excluir a hospedagem");
+      }
+    } catch (error) {
+      toast.error("Erro ao excluir a hospedagem");
+      console.error("Erro ao excluir a hospedagem:", error);
     }
   };
 
@@ -272,6 +327,22 @@ const Hospedagem = () => {
                       <TableCell>{hosting.state}</TableCell>
                       <TableCell>{hosting.city}</TableCell>
                       <TableCell>{hosting.observation}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleViewMore(hosting)}
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => handleDeleteHosting(hosting.id)} // Função de exclusão
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -304,6 +375,14 @@ const Hospedagem = () => {
             )}
           </CardContent>
         </Card>
+        {selectedHosting && (
+          <EditHostingDialog
+            hosting={selectedHosting}
+            isOpen={isEditDialogOpen}
+            onClose={handleCloseDialog} // Fecha o diálogo e limpa o estado
+            onSave={handleSaveHosting}
+          />
+        )}
       </div>
     </div>
   );

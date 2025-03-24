@@ -1,6 +1,11 @@
 "use client";
 
-import { ChevronLeftIcon, ChevronRightIcon, TrashIcon } from "lucide-react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  EyeIcon,
+  TrashIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -20,18 +25,20 @@ import {
 } from "@/components/ui/table";
 import { fetchCitiesByState, fetchStates } from "@/services/ibge"; // Importe as funções do IBGE
 
+import { EditTicketDialog } from "./components/edit-ticket-dialog";
 import RegisterTicketDialog from "./components/register-ticket-dialog";
 
+// Defina o tipo Ticket
+type Ticket = {
+  id: number;
+  name: string;
+  state: string;
+  city: string;
+  observation?: string; // O campo observation é opcional
+};
+
 const Ingressos = () => {
-  const [tickets, setTickets] = useState<
-    {
-      id: number;
-      name: string;
-      state: string;
-      city: string;
-      observation: string;
-    }[]
-  >([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [filters, setFilters] = useState({
     id: "",
     name: "",
@@ -49,6 +56,31 @@ const Ingressos = () => {
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5); // Quantos itens por página
+
+  // Adicione o estado para controlar o diálogo
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
+  // Função para abrir o diálogo de edição
+  const handleViewMore = (ticket: Ticket) => {
+    setSelectedTicket(ticket); // Define o ingresso selecionado
+    setIsEditDialogOpen(true); // Abre o diálogo
+  };
+
+  // Função para fechar o diálogo e limpar o estado
+  const handleCloseDialog = () => {
+    setIsEditDialogOpen(false); // Fecha o diálogo
+    setSelectedTicket(null); // Limpa o ingresso selecionado
+  };
+
+  // Função para salvar as alterações
+  const handleSaveTicket = (updatedTicket: Ticket) => {
+    setTickets((prevTickets) =>
+      prevTickets.map((ticket) =>
+        ticket.id === updatedTicket.id ? updatedTicket : ticket,
+      ),
+    );
+  };
 
   // Busca os estados ao carregar a página
   useEffect(() => {
@@ -80,13 +112,7 @@ const Ingressos = () => {
     }
   };
 
-  const handleTicketCreated = (newTicket: {
-    id: number;
-    name: string;
-    state: string;
-    city: string;
-    observation: string;
-  }) => {
+  const handleTicketCreated = (newTicket: Ticket) => {
     setTickets((prevTickets) => [...prevTickets, newTicket]);
   };
 
@@ -306,6 +332,14 @@ const Ingressos = () => {
                       <TableCell>{ticket.observation}</TableCell>
                       <TableCell>
                         <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleViewMore(ticket)}
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          className="ml-2"
                           variant="destructive"
                           size="icon"
                           onClick={() => handleDeleteTicket(ticket.id)} // Função de exclusão
@@ -345,6 +379,15 @@ const Ingressos = () => {
             )}
           </CardContent>
         </Card>
+
+        {selectedTicket && (
+          <EditTicketDialog
+            ticket={selectedTicket}
+            isOpen={isEditDialogOpen}
+            onClose={handleCloseDialog} // Fecha o diálogo e limpa o estado
+            onSave={handleSaveTicket}
+          />
+        )}
       </div>
     </div>
   );

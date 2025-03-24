@@ -1,5 +1,6 @@
 "use client";
 
+import { EyeIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -18,7 +19,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { EditTourOperatorDialog } from "./components/edit-tour-operator-dialog";
 import RegisterTourOperatorDialog from "./components/register-tour-operator-dialog";
+
+interface TourOperator {
+  id: number;
+  name: string;
+  phone: string;
+  contact: string;
+  email: string;
+  site: string;
+  login: string;
+  password: string;
+  upfrontComission: number;
+  installmentComission: number;
+}
 
 const Operadoras = () => {
   const [filters, setFilters] = useState({
@@ -30,16 +45,35 @@ const Operadoras = () => {
     site: "",
   });
 
-  const [tourOperators, setTourOperators] = useState<
-    {
-      id: number;
-      name: string;
-      contact: string;
-      phone: string;
-      email: string;
-      site: string;
-    }[]
-  >([]);
+  const [tourOperators, setTourOperators] = useState<TourOperator[]>([]);
+
+  // Adicione o estado para controlar o diálogo
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedTourOperator, setSelectedTourOperator] =
+    useState<TourOperator | null>(null);
+
+  // Função para abrir o diálogo de edição
+  const handleViewMore = (ticket: TourOperator) => {
+    setSelectedTourOperator(ticket); // Define o ingresso selecionado
+    setIsEditDialogOpen(true); // Abre o diálogo
+  };
+
+  // Função para fechar o diálogo e limpar o estado
+  const handleCloseDialog = () => {
+    setIsEditDialogOpen(false); // Fecha o diálogo
+    setSelectedTourOperator(null); // Limpa o ingresso selecionado
+  };
+
+  // Função para salvar as alterações
+  const handleSaveTourOperator = (updatedTourOperator: TourOperator) => {
+    setTourOperators((prevTourOperator) =>
+      prevTourOperator.map((TourOperator) =>
+        TourOperator.id === updatedTourOperator.id
+          ? updatedTourOperator
+          : TourOperator,
+      ),
+    );
+  };
 
   const fetchTourOperators = async () => {
     try {
@@ -64,6 +98,35 @@ const Operadoras = () => {
     } catch (err) {
       toast.error("Erro ao carregar as operadoras filtradas");
       console.error("Erro ao carregar as operadoras", err);
+    }
+  };
+
+  const handleDeleteTourOperator = async (tourOperatorId: number) => {
+    try {
+      const response = await fetch(
+        `/api/touroperator/delete?id=${tourOperatorId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (response.ok) {
+        toast.success("Operadora excluída com sucesso!");
+        // Atualiza a lista de ingressos após a exclusão
+        setTourOperators((prevTourOperator) =>
+          prevTourOperator.filter(
+            (tourOperator) => tourOperator.id !== tourOperatorId,
+          ),
+        );
+      } else {
+        toast.error("Erro ao excluir a operadora");
+      }
+    } catch (error) {
+      toast.error("Erro ao excluir a operadora");
+      console.error("Erro ao excluir a operadora:", error);
     }
   };
 
@@ -161,6 +224,24 @@ const Operadoras = () => {
                       <TableCell>{tourOperator.phone}</TableCell>
                       <TableCell>{tourOperator.email}</TableCell>
                       <TableCell>{tourOperator.site}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleViewMore(tourOperator)}
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() =>
+                            handleDeleteTourOperator(tourOperator.id)
+                          } // Função de exclusão
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -170,6 +251,14 @@ const Operadoras = () => {
             )}
           </CardContent>
         </Card>
+        {selectedTourOperator && (
+          <EditTourOperatorDialog
+            tourOperator={selectedTourOperator}
+            isOpen={isEditDialogOpen}
+            onClose={handleCloseDialog} // Fecha o diálogo e limpa o estado
+            onSave={handleSaveTourOperator}
+          />
+        )}
       </div>
     </div>
   );
