@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -27,10 +26,29 @@ const RegisterTourOperatorDialog = () => {
   const [password, setPassword] = useState<string>("");
   const [upfrontComission, setUpfrontComission] = useState<string>("");
   const [installmentComission, setInstallmentComission] = useState<string>("");
+  const [observation, setObservation] = useState<string>("");
   const [isOpen, setIsOpen] = useState<boolean>(false);
+
+  const handleFloatInput = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: React.Dispatch<React.SetStateAction<string>>,
+  ) => {
+    const value = e.target.value;
+
+    // Permite:
+    // - Números (0-9)
+    // - Máximo uma vírgula
+    // - Não permite pontos
+    if (/^\d*,?\d*$/.test(value)) {
+      setter(value);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const formatForSubmit = (value: string) =>
+      value ? parseFloat(value.replace(",", ".")) : 0;
 
     const response = await fetch("/api/touroperator/create", {
       method: "POST",
@@ -45,8 +63,9 @@ const RegisterTourOperatorDialog = () => {
         site,
         login,
         password,
-        upfrontComission,
-        installmentComission,
+        upfrontComission: formatForSubmit(upfrontComission),
+        installmentComission: formatForSubmit(installmentComission),
+        observation,
       }),
     });
 
@@ -63,21 +82,10 @@ const RegisterTourOperatorDialog = () => {
       setPassword("");
       setUpfrontComission("");
       setInstallmentComission("");
+      setObservation("");
     } else {
       const error = await response.json();
       toast.error(error.message);
-    }
-  };
-
-  const handleFloatInput = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    setter: React.Dispatch<React.SetStateAction<string>>,
-  ) => {
-    const value = e.target.value;
-
-    // Permitir números flutuantes (pode ter um ponto decimal, mas não mais de um)
-    if (/^\d*\.?\d*$/.test(value)) {
-      setter(value);
     }
   };
 
@@ -91,9 +99,6 @@ const RegisterTourOperatorDialog = () => {
       <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
         <DialogHeader>
           <DialogTitle>Cadastrar operadora</DialogTitle>
-          <DialogDescription>
-            Preencha as informações abaixo e cadastre uma operadora.
-          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-5">
@@ -117,7 +122,7 @@ const RegisterTourOperatorDialog = () => {
             <IMaskInput
               id="telefone"
               mask="(00) 0000-0000" // Máscara para telefone
-              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={phone}
               onAccept={(value) => setPhone(value)}
               required
@@ -190,11 +195,11 @@ const RegisterTourOperatorDialog = () => {
 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="comissao-a-vista" className="text-right">
-              Comissão à vista
+              Comissão à vista (%)
             </Label>
             <Input
               id="comissao-a-vista"
-              type="text" // Usando tipo text para controlar a entrada
+              type="text"
               className="col-span-3"
               value={upfrontComission}
               onChange={(e) => handleFloatInput(e, setUpfrontComission)}
@@ -203,19 +208,33 @@ const RegisterTourOperatorDialog = () => {
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="comissao-parcelada" className="text-right">
-              Comissão parcelada
+              Comissão parcelada (%)
             </Label>
             <Input
               id="comissao-parcelada"
-              type="text" // Usando tipo text para controlar a entrada
+              type="text"
               className="col-span-3"
               value={installmentComission}
               onChange={(e) => handleFloatInput(e, setInstallmentComission)}
               required
             />
           </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="observacao" className="text-right">
+              Observação
+            </Label>
+            <textarea
+              id="observacao"
+              className="col-span-3 rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={4}
+              value={observation}
+              onChange={(e) => setObservation(e.target.value)}
+            />
+          </div>
           <DialogFooter>
-            <Button type="submit">Cadastrar operadora</Button>
+            <Button type="submit" variant="outline">
+              Cadastrar operadora
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

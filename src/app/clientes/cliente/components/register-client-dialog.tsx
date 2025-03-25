@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -147,15 +146,12 @@ const RegisterClientDialog = () => {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" onClick={() => setIsOpen(true)}>
-          Cadastrar Cliente
+          Cadastrar cliente
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
         <DialogHeader>
-          <DialogTitle>Cadastrar Cliente</DialogTitle>
-          <DialogDescription>
-            Preencha as informações abaixo e cadastre um cliente.
-          </DialogDescription>
+          <DialogTitle>Cadastrar cliente</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-5">
@@ -178,6 +174,7 @@ const RegisterClientDialog = () => {
             </Label>
             <Select
               id="tags"
+              placeholder=""
               options={tagOptions}
               isMulti
               value={tagOptions.filter((option) =>
@@ -188,30 +185,70 @@ const RegisterClientDialog = () => {
               }}
               className="col-span-3"
               styles={{
-                control: (base) => ({
+                control: (base, { isFocused }) => ({
                   ...base,
-                  borderColor: "#e2e8f0",
+                  backgroundColor: "rgba(229, 229, 229, 0.3)", // bg-[#e5e5e5]/30
+                  borderColor: isFocused ? "#86b7fe" : "#e2e8f0",
+                  boxShadow: isFocused
+                    ? "0 0 0 0.25rem rgba(13, 110, 253, 0.25)"
+                    : "none",
+                  minHeight: "40px", // mesmo height dos outros inputs
                   "&:hover": {
-                    borderColor: "#e2e8f0",
+                    borderColor: "#86b7fe",
                   },
                 }),
                 multiValue: (base) => ({
                   ...base,
-                  backgroundColor: "#e2e8f0",
+                  backgroundColor: "rgba(229, 229, 229, 0.5)", // 50% de opacidade para contraste
                 }),
                 multiValueLabel: (base) => ({
                   ...base,
                   color: "#1e293b",
+                  fontWeight: "500",
                 }),
                 multiValueRemove: (base) => ({
                   ...base,
-                  color: "#1e293b",
+                  color: "#64748b",
                   ":hover": {
-                    backgroundColor: "#cbd5e1",
-                    color: "#1e293b",
+                    backgroundColor: "rgba(229, 229, 229, 0.8)",
+                    color: "#dc3545",
                   },
                 }),
+                menu: (base) => ({
+                  ...base,
+                  backgroundColor: "rgba(229, 229, 229, 0.95)", // Fundo mais sólido no dropdown
+                  marginTop: "4px",
+                }),
+                option: (base, { isFocused, isSelected }) => ({
+                  ...base,
+                  backgroundColor: isSelected
+                    ? "rgba(203, 213, 225, 0.7)" // azul bem suave quando selecionado
+                    : isFocused
+                      ? "rgba(203, 213, 225, 0.5)" // hover suave
+                      : "transparent",
+                  color: "#1e293b",
+                  "&:active": {
+                    backgroundColor: "rgba(203, 213, 225, 0.7)",
+                  },
+                }),
+                input: (base) => ({
+                  ...base,
+                  color: "#1e293b",
+                }),
+                placeholder: (base) => ({
+                  ...base,
+                  color: "#64748b",
+                }),
               }}
+              theme={(theme) => ({
+                ...theme,
+                colors: {
+                  ...theme.colors,
+                  primary: "#e2e8f0", // cor do foco
+                  primary25: "rgba(229, 229, 229, 0.5)", // hover mais claro
+                  primary50: "rgba(229, 229, 229, 0.7)", // hover mais forte
+                },
+              })}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -234,7 +271,7 @@ const RegisterClientDialog = () => {
             <IMaskInput
               id="cpf"
               mask="000.000.000-00"
-              className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={cpf}
               onAccept={(value) => setCpf(value)} // Usando onAccept para capturar o valor
               required
@@ -247,7 +284,7 @@ const RegisterClientDialog = () => {
             <IMaskInput
               id="data-nascimento"
               mask="00/00/0000"
-              className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={dateOfBirth}
               onAccept={(value) => setDateOfBirth(value)} // Corrigido
               required
@@ -273,7 +310,7 @@ const RegisterClientDialog = () => {
             <IMaskInput
               id="telefone-princ"
               mask="(00) 00000-0000"
-              className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={primaryPhone}
               onAccept={(value) => setPrimaryPhone(value)} // Corrigido
               required
@@ -286,7 +323,7 @@ const RegisterClientDialog = () => {
             <IMaskInput
               id="telefone-sec"
               mask="(00) 00000-0000"
-              className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={secondaryPhone}
               onAccept={(value) => setSecondaryPhone(value)} // Corrigido
               required
@@ -298,12 +335,12 @@ const RegisterClientDialog = () => {
             </Label>
             <select
               id="estado"
-              className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={state}
               onChange={(e) => setState(e.target.value)}
               required
             >
-              <option value="">Selecione um estado</option>
+              <option value=""></option>
               {states.map((state) => (
                 <option key={state.id} value={state.nome}>
                   {state.nome}
@@ -317,12 +354,12 @@ const RegisterClientDialog = () => {
             </Label>
             <select
               id="cidade"
-              className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={city}
               onChange={(e) => setCity(e.target.value)}
               disabled={!state}
             >
-              <option value="">Selecione uma cidade</option>
+              <option value=""></option>
               {cities.map((c) => (
                 <option key={c.id} value={c.nome}>
                   {c.nome}
@@ -331,7 +368,9 @@ const RegisterClientDialog = () => {
             </select>
           </div>
           <DialogFooter>
-            <Button type="submit">Cadastrar cliente</Button>
+            <Button type="submit" variant="outline">
+              Cadastrar cliente
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -59,15 +58,12 @@ const RegisterCompanionDialog = () => {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" onClick={() => setIsOpen(true)}>
-          Cadastrar Acompanhante
+          Cadastrar acompanhante
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
         <DialogHeader>
-          <DialogTitle>Cadastrar Acompanhante</DialogTitle>
-          <DialogDescription>
-            Preencha as informações abaixo e cadastre um acompanhante.
-          </DialogDescription>
+          <DialogTitle>Cadastrar acompanhante</DialogTitle>
         </DialogHeader>
 
         {/* Scrollable Area */}
@@ -95,8 +91,7 @@ const RegisterCompanionDialog = () => {
             <IMaskInput
               id="telefone"
               mask="(00) 00000-0000" // Máscara para telefone (Brasil)
-              placeholder="(00) 00000-0000"
-              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={phone}
               onAccept={(value) => setPhone(value)}
               required
@@ -122,15 +117,16 @@ const RegisterCompanionDialog = () => {
             <IMaskInput
               id="data-nascimento"
               mask="00/00/0000" // Máscara para formato de data
-              placeholder="DD/MM/AAAA"
-              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={dateOfBirth}
               onAccept={(value) => setDateOfBirth(value)} // Atualiza o estado corretamente
               required
             />
           </div>
           <DialogFooter>
-            <Button type="submit">Cadastrar acompanhante</Button>
+            <Button type="submit" variant="outline">
+              Cadastrar acompanhante
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

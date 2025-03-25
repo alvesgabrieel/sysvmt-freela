@@ -1,12 +1,11 @@
-"use client"
+"use client";
 
 import { useState } from "react";
 
-import Metrics from "@/app/components/metrics";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent,CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -27,12 +26,9 @@ const RelatorioDeVendas = () => {
   return (
     <div className="flex">
       <Sidebar />
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 space-y-6 p-6">
         {/* Barra de cima */}
         <TopBar />
-
-        {/* Cards de métricas */}
-        <Metrics />
 
         {/* Filtros */}
         <Card>
@@ -117,7 +113,7 @@ const RelatorioDeVendas = () => {
                 onChange={(e) =>
                   setFilters({ ...filters, operadora: e.target.value })
                 }
-                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Selecione a operadora</option>
                 <option value="Operadora A">Operadora A</option>
@@ -134,7 +130,7 @@ const RelatorioDeVendas = () => {
                 onChange={(e) =>
                   setFilters({ ...filters, ingresso: e.target.value })
                 }
-                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Selecione o ingresso</option>
                 <option value="Ingresso A">Ingresso A</option>
@@ -151,7 +147,7 @@ const RelatorioDeVendas = () => {
                 onChange={(e) =>
                   setFilters({ ...filters, hospedagem: e.target.value })
                 }
-                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Selecione a hospedagem</option>
                 <option value="Hospedagem A">Hospedagem A</option>
@@ -160,7 +156,9 @@ const RelatorioDeVendas = () => {
               </select>
             </div>
           </CardContent>
-          <Button className="ml-6 w-32">Buscar</Button>
+          <Button className="ml-6 w-32" variant="outline">
+            Buscar
+          </Button>
         </Card>
       </div>
     </div>

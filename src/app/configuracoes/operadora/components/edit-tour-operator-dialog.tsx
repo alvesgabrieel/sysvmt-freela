@@ -24,6 +24,7 @@ interface TourOperator {
   password: string;
   upfrontComission: number; // Pode ser número ou string
   installmentComission: number; // Pode ser número ou string
+  observation?: string | null;
 }
 
 interface EditTourOperatorDialogProps {
@@ -39,11 +40,15 @@ export const EditTourOperatorDialog = ({
   onClose,
   onSave,
 }: EditTourOperatorDialogProps) => {
-  const [editedTourOperator, setEditedTourOperator] =
-    useState<TourOperator>(tourOperator);
+  const [editedTourOperator, setEditedTourOperator] = useState<TourOperator>({
+    ...tourOperator,
+    observation: tourOperator.observation || "", // Converte null/undefined para string vazia
+  });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
   ) => {
     const { name, value } = e.target;
     setEditedTourOperator((prev) => ({
@@ -63,6 +68,7 @@ export const EditTourOperatorDialog = ({
         installmentComission: parseFloat(
           String(editedTourOperator.installmentComission),
         ), // Converte para string antes de usar parseFloat
+        observation: editedTourOperator.observation?.trim() || null, // Converte string vazia para null
       };
 
       const response = await fetch(
@@ -92,7 +98,7 @@ export const EditTourOperatorDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Editar Operadora</DialogTitle>
+          <DialogTitle>Editar operadora</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
@@ -167,12 +173,24 @@ export const EditTourOperatorDialog = ({
               onChange={handleChange}
             />
           </div>
+          <div className="grid w-full gap-1.5">
+            {" "}
+            {/* Container pai */}
+            <Label>Observação</Label>
+            <textarea
+              name="observation"
+              className="w-full rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={4}
+              value={editedTourOperator.observation ?? ""}
+              onChange={handleChange}
+            />
+          </div>
 
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancelar
+            <Button onClick={onClose}>Cancelar</Button>
+            <Button onClick={handleSave} variant="outline">
+              Salvar
             </Button>
-            <Button onClick={handleSave}>Salvar</Button>
           </div>
         </div>
       </DialogContent>

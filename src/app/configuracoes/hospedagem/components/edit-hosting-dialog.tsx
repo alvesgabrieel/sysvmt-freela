@@ -141,7 +141,7 @@ export const EditHostingDialog = ({
               name="state"
               value={editedHosting.state}
               onChange={handleChange}
-              className="w-full rounded border p-2"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">Selecione um estado</option>
               {states.map((state) => (
@@ -157,7 +157,7 @@ export const EditHostingDialog = ({
               name="city"
               value={editedHosting.city}
               onChange={handleChange}
-              className="w-full rounded border p-2"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={!editedHosting.state} // Desabilita se nenhum estado for selecionado
             >
               <option value="">Selecione uma cidade</option>
@@ -177,10 +177,10 @@ export const EditHostingDialog = ({
             />
           </div>
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancelar
+            <Button onClick={onClose}>Cancelar</Button>
+            <Button onClick={handleSave} variant="outline">
+              Salvar
             </Button>
-            <Button onClick={handleSave}>Salvar</Button>
           </div>
         </div>
       </DialogContent>

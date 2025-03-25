@@ -34,8 +34,8 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
-    {
+  },
+  {
     id: "U2349SD12",
     data: "19/02/2025",
     checkin: "19:20:22",
@@ -48,8 +48,8 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
-    {
+  },
+  {
     id: "U2349SD13",
     data: "19/02/2025",
     checkin: "19:20:22",
@@ -62,8 +62,8 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
-    {
+  },
+  {
     id: "U2349SD14",
     data: "19/02/2025",
     checkin: "19:20:22",
@@ -76,8 +76,8 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
-    {
+  },
+  {
     id: "U2349SD15",
     data: "19/02/2025",
     checkin: "19:20:22",
@@ -90,8 +90,8 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
-    {
+  },
+  {
     id: "U2349SD16",
     data: "19/02/2025",
     checkin: "19:20:22",
@@ -104,8 +104,8 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
-    {
+  },
+  {
     id: "U2349SD17",
     data: "19/02/2025",
     checkin: "19:20:22",
@@ -118,8 +118,8 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
-    {
+  },
+  {
     id: "U2349SD18",
     data: "19/02/2025",
     checkin: "19:20:22",
@@ -132,8 +132,8 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
-    {
+  },
+  {
     id: "U2349SD19",
     data: "19/02/2025",
     checkin: "19:20:22",
@@ -146,8 +146,8 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
-    {
+  },
+  {
     id: "U2349SD20",
     data: "19/02/2025",
     checkin: "19:20:22",
@@ -160,8 +160,8 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
-    {
+  },
+  {
     id: "U2349SD21",
     data: "19/02/2025",
     checkin: "19:20:22",
@@ -174,8 +174,8 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
-    {
+  },
+  {
     id: "U2349SD22",
     data: "19/02/2025",
     checkin: "19:20:22",
@@ -188,7 +188,7 @@ const initialOrders = [
     totalCashback: "R$ 100",
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
-    },
+  },
 ];
 
 export default function Dashboard() {
@@ -218,7 +218,7 @@ export default function Dashboard() {
     }
   }, [router]);
 
-  const itemsPerPage = 10; 
+  const itemsPerPage = 10;
 
   if (!isAuthenticated) {
     return <Loader />;
@@ -231,8 +231,8 @@ export default function Dashboard() {
         filters[key as keyof typeof filters] === "" ||
         order[key as keyof typeof order]
           .toLowerCase()
-          .includes(filters[key as keyof typeof filters].toLowerCase())
-    )
+          .includes(filters[key as keyof typeof filters].toLowerCase()),
+    ),
   );
 
   // Lógica de paginação
@@ -246,7 +246,7 @@ export default function Dashboard() {
   return (
     <div className="flex">
       <Sidebar />
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 space-y-6 p-6">
         {/* Barra de cima  */}
         <TopBar />
         {/* Cards de métricas */}
@@ -301,11 +301,11 @@ export default function Dashboard() {
             </Table>
 
             {/* Controles de paginação */}
-            <div className="flex justify-between items-center mt-4">
+            <div className="mt-4 flex items-center justify-between">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+                className="rounded bg-gray-200 px-4 py-2 disabled:opacity-50"
               >
                 Anterior
               </button>
@@ -320,14 +320,15 @@ export default function Dashboard() {
                   setCurrentPage((prev) =>
                     Math.min(
                       prev + 1,
-                      Math.ceil(filteredOrders.length / itemsPerPage)
-                    )
+                      Math.ceil(filteredOrders.length / itemsPerPage),
+                    ),
                   )
                 }
                 disabled={
-                  currentPage === Math.ceil(filteredOrders.length / itemsPerPage)
+                  currentPage ===
+                  Math.ceil(filteredOrders.length / itemsPerPage)
                 }
-                className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+                className="rounded bg-gray-200 px-4 py-2 disabled:opacity-50"
               >
                 Próximo
               </button>

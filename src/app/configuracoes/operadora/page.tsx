@@ -4,7 +4,6 @@ import { EyeIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import Metrics from "@/app/components/metrics";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -33,6 +32,7 @@ interface TourOperator {
   password: string;
   upfrontComission: number;
   installmentComission: number;
+  observation?: string | null;
 }
 
 const Operadoras = () => {
@@ -140,8 +140,7 @@ const Operadoras = () => {
       <div className="flex-1 space-y-6 p-6">
         {/* Barra de cima  */}
         <TopBar />
-        {/* Cards de métricas */}
-        <Metrics />
+
         <RegisterTourOperatorDialog />
         {/* Filtros */}
         <Card>
@@ -233,6 +232,7 @@ const Operadoras = () => {
                           <EyeIcon className="h-4 w-4" />
                         </Button>
                         <Button
+                          className="ml-3"
                           variant="destructive"
                           size="icon"
                           onClick={() =>

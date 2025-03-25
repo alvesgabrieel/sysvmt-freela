@@ -10,7 +10,6 @@ import { useState } from "react";
 import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
-import Metrics from "@/app/components/metrics";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -192,8 +191,7 @@ const Acompanhante = () => {
       <div className="flex-1 space-y-6 p-6">
         {/* Barra de cima  */}
         <TopBar />
-        {/* Cards de métricas */}
-        <Metrics />
+
         <RegisterCompanionDialog />
 
         {/* Filtros */}
@@ -254,7 +252,7 @@ const Acompanhante = () => {
         {/* Tabela de acompanhantes filtrados */}
         <Card>
           <CardHeader>
-            <CardTitle>Clientes filtrados</CardTitle>
+            <CardTitle>Acompanhantes filtrados</CardTitle>
           </CardHeader>
           <CardContent>
             {companion.length > 0 ? (
@@ -296,7 +294,7 @@ const Acompanhante = () => {
                 </TableBody>
               </Table>
             ) : (
-              <p>Nenhum ingresso encontrado com os filtros aplicados.</p>
+              <p>Nenhum acompanhante encontrado com os filtros aplicados.</p>
             )}
 
             {/* Paginação Personalizada */}

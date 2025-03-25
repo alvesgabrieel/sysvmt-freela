@@ -110,6 +110,7 @@ model TourOperator {
   password             String
   upfrontComission     Float
   installmentComission Float
+  observation          String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

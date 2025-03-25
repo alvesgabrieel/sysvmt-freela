@@ -49,8 +49,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: "Operador já existe.",
-          message:
-            "Já existe um operador turístico com este nome, e-mail ou login.",
+          message: "Já existe uma operadora com este nome, e-mail ou login.",
         },
         { status: 400 },
       );
@@ -67,6 +66,7 @@ export async function POST(request: Request) {
         password: data.password,
         upfrontComission,
         installmentComission,
+        observation: data.observation,
       },
     });
 

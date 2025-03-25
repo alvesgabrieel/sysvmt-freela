@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import Metrics from "@/app/components/metrics";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,8 +102,6 @@ const Cashback = () => {
       <div className="flex-1 space-y-6 p-6">
         {/* Barra de cima */}
         <TopBar />
-        {/* Cards de métricas */}
-        <Metrics />
         {/* Filtros */}
         <Card>
           <CardHeader>

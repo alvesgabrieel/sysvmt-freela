@@ -76,14 +76,19 @@ export const EditTagDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="max-w-[320px] sm:max-w-[350px]">
         <DialogHeader>
           <DialogTitle>Editar Tag</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
             <Label>Nome</Label>
-            <Input name="name" value={editedTag.name} onChange={handleChange} />
+            <Input
+              name="name"
+              value={editedTag.name}
+              onChange={handleChange}
+              className="mt-1"
+            />
           </div>
           <div>
             <Label>Cor</Label>
@@ -119,10 +124,10 @@ export const EditTagDialog = ({
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancelar
+            <Button onClick={onClose}>Cancelar</Button>
+            <Button onClick={handleSave} variant="outline">
+              Salvar
             </Button>
-            <Button onClick={handleSave}>Salvar</Button>
           </div>
         </div>
       </DialogContent>

@@ -4,7 +4,6 @@ import { EyeIcon, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import Metrics from "@/app/components/metrics";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -107,7 +106,7 @@ const Tags = () => {
       <Sidebar />
       <div className="flex-1 space-y-6 p-6">
         <TopBar />
-        <Metrics />
+
         <RegisterTagDialog onTagCreated={handleTagCreated} />
 
         {/* Tabela de Tags */}
@@ -139,7 +138,8 @@ const Tags = () => {
                   <Button
                     variant="destructive"
                     size="icon"
-                    onClick={() => handleDeleteTag(tag.id)} // Função de exclusão
+                    onClick={() => handleDeleteTag(tag.id)}
+                    className="ml-3"
                   >
                     <TrashIcon className="h-4 w-4" />
                   </Button>

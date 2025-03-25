@@ -272,10 +272,10 @@ export const EditSallerDialog = ({
             />
           </div>
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancelar
+            <Button onClick={onClose}>Cancelar</Button>
+            <Button onClick={handleSave} variant="outline">
+              Salvar
             </Button>
-            <Button onClick={handleSave}>Salvar</Button>
           </div>
         </div>
       </DialogContent>

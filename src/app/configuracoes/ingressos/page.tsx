@@ -9,7 +9,6 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import Metrics from "@/app/components/metrics";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -243,8 +242,7 @@ const Ingressos = () => {
       <div className="flex-1 space-y-6 p-6">
         {/* Barra de cima */}
         <TopBar />
-        {/* Cards de métricas */}
-        <Metrics />
+
         <RegisterTicketDialog onTicketCreated={handleTicketCreated} />
 
         {/* Filtros */}
@@ -271,9 +269,9 @@ const Ingressos = () => {
               name="state"
               value={filters.state || ""}
               onChange={handleFilterChange}
-              className="rounded border p-2"
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="">Selecione um estado</option>
+              <option value="">Estado</option>
               {states.map((state) => (
                 <option key={state.id} value={state.nome}>
                   {state.nome} ({state.sigla})
@@ -284,10 +282,10 @@ const Ingressos = () => {
               name="city"
               value={filters.city || ""}
               onChange={handleFilterChange}
-              className="rounded border p-2"
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={!filters.state} // Desabilita se nenhum estado for selecionado
             >
-              <option value="">Selecione uma cidade</option>
+              <option value="">Cidade</option>
               {cities.map((city) => (
                 <option key={city.id} value={city.nome}>
                   {city.nome}

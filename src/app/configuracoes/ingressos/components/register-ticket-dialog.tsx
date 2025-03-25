@@ -4,169 +4,194 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { fetchCitiesByState,fetchStates } from "@/services/ibge"; // Importando o serviço
+import { fetchCitiesByState, fetchStates } from "@/services/ibge"; // Importando o serviço
 
 interface RegisterTicketDialogProps {
-  onTicketCreated: (ticket: { id: number, name: string; state: string; city: string, observation: string }) => void;
+  onTicketCreated: (ticket: {
+    id: number;
+    name: string;
+    state: string;
+    city: string;
+    observation: string;
+  }) => void;
 }
 
-const RegisterTicketDialog: React.FC<RegisterTicketDialogProps> = ({ onTicketCreated }) => {
-    const [name, setName] = useState(""); 
-    const [state, setState] = useState("");
-    const [city, setCity] = useState("");
-    const [observation, setObservation] = useState("");
-    const [isOpen, setIsOpen] = useState(false);
+const RegisterTicketDialog: React.FC<RegisterTicketDialogProps> = ({
+  onTicketCreated,
+}) => {
+  const [name, setName] = useState("");
+  const [state, setState] = useState("");
+  const [city, setCity] = useState("");
+  const [observation, setObservation] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
 
-    const [states, setStates] = useState<{ id: number; nome: string }[]>([]);
-    const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
+  const [states, setStates] = useState<{ id: number; nome: string }[]>([]);
+  const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
 
-    // Buscar estados
-    useEffect(() => {
-        const loadStates = async () => {
-            try {
-                const statesData = await fetchStates();
-                setStates(statesData);
-            } catch (error) {
-                toast.error("Erro ao buscar estados");
-                console.log(error);
-            }
-        };
-        loadStates();
-    }, []);
-
-    // Buscar cidades do estado selecionado
-    useEffect(() => {
-        if (!state) return;
-        const loadCities = async () => {
-            try {
-                const selectedState = states.find((s) => s.nome === state);
-                if (selectedState) {
-                    const citiesData = await fetchCitiesByState(selectedState.id);
-                    setCities(citiesData);
-                }
-            } catch (error) {
-                toast.error("Erro ao buscar cidades");
-                console.log(error)
-                setCities([]);
-            }
-        };
-        loadCities();
-    }, [state, states]);
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        const response = await fetch("/api/ticket/create", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ name, state, city, observation }),
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            toast.success(result.message);
-            onTicketCreated(result.ticket);
-            setIsOpen(false);
-            setName("");
-            setState("");
-            setCity("");
-            setObservation("");
-        } else {
-            const error = await response.json();
-            toast.error(error.message);
-        }
+  // Buscar estados
+  useEffect(() => {
+    const loadStates = async () => {
+      try {
+        const statesData = await fetchStates();
+        setStates(statesData);
+      } catch (error) {
+        toast.error("Erro ao buscar estados");
+        console.log(error);
+      }
     };
+    loadStates();
+  }, []);
 
-    return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline" onClick={() => setIsOpen(true)}>Cadastrar Ingresso</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
-                <DialogHeader>
-                    <DialogTitle>Cadastrar Ingresso</DialogTitle>
-                    <DialogDescription>
-                        Preencha as informações abaixo e cadastre um ingresso.
-                    </DialogDescription>
-                </DialogHeader>
+  // Buscar cidades do estado selecionado
+  useEffect(() => {
+    if (!state) return;
+    const loadCities = async () => {
+      try {
+        const selectedState = states.find((s) => s.nome === state);
+        if (selectedState) {
+          const citiesData = await fetchCitiesByState(selectedState.id);
+          setCities(citiesData);
+        }
+      } catch (error) {
+        toast.error("Erro ao buscar cidades");
+        console.log(error);
+        setCities([]);
+      }
+    };
+    loadCities();
+  }, [state, states]);
 
-                <form onSubmit={handleSubmit} className="space-y-4 p-5">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">
-                            Nome
-                        </Label>
-                        <Input id="name" type="text" className="col-span-3" value={name} onChange={(e) => setName(e.target.value)} required />
-                    </div>
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-                    {/* Estados */}
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="estado" className="text-right">
-                            Estado
-                        </Label>
-                        <select
-                            id="estado"
-                            className="col-span-3 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={state} 
-                            onChange={(e) => setState(e.target.value)} 
-                            required
-                        >
-                            <option value="">Selecione um estado</option>
-                            {states.map((s) => (
-                                <option key={s.id} value={s.nome}>
-                                    {s.nome}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+    const response = await fetch("/api/ticket/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name, state, city, observation }),
+    });
 
-                    {/* Cidades */}
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="cidade" className="text-right">
-                            Cidade
-                        </Label>
-                        <select
-                            id="cidade"
-                            className="col-span-3 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={city}
-                            onChange={(e) => setCity(e.target.value)}
-                            required
-                            disabled={!state}
-                        >
-                            <option value="">Selecione uma cidade</option>
-                            {cities.map((c) => (
-                                <option key={c.id} value={c.nome}>
-                                    {c.nome}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+    if (response.ok) {
+      const result = await response.json();
+      toast.success(result.message);
+      onTicketCreated(result.ticket);
+      setIsOpen(false);
+      setName("");
+      setState("");
+      setCity("");
+      setObservation("");
+    } else {
+      const error = await response.json();
+      toast.error(error.message);
+    }
+  };
 
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="observacao" className="text-right">
-                            Observação
-                        </Label>
-                        <textarea
-                            id="observacao"
-                            className="col-span-3 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            rows={4}
-                            placeholder="Digite suas observações..."
-                            value={observation}
-                            onChange={(e) => setObservation(e.target.value)}
-                        />
-                    </div>
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" onClick={() => setIsOpen(true)}>
+          Cadastrar ingresso
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
+        <DialogHeader>
+          <DialogTitle>Cadastrar ingresso</DialogTitle>
+        </DialogHeader>
 
-                    <DialogFooter>
-                        <Button type="submit">Cadastrar ingresso</Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
-    );
+        <form onSubmit={handleSubmit} className="space-y-4 p-5">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name" className="text-right">
+              Nome
+            </Label>
+            <Input
+              id="name"
+              type="text"
+              className="col-span-3"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Estados */}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="estado" className="text-right">
+              Estado
+            </Label>
+            <select
+              id="estado"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              required
+            >
+              <option value=""></option>
+              {states.map((s) => (
+                <option key={s.id} value={s.nome}>
+                  {s.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Cidades */}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="cidade" className="text-right">
+              Cidade
+            </Label>
+            <select
+              id="cidade"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              required
+              disabled={!state}
+            >
+              <option value=""></option>
+              {cities.map((c) => (
+                <option key={c.id} value={c.nome}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-4 items-start gap-4">
+            {" "}
+            {/* Mantive grid mas com items-start */}
+            <Label htmlFor="observacao" className="mt-2 text-right">
+              {" "}
+              {/* Adicionei mt-2 para alinhar verticalmente */}
+              Observação
+            </Label>
+            <textarea
+              id="observacao"
+              className="col-span-3 min-h-[100px] w-auto rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" // Removi w-full e adicionei w-auto
+              value={observation}
+              onChange={(e) => setObservation(e.target.value)}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="submit" variant="outline">
+              Cadastrar ingresso
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 export default RegisterTicketDialog;

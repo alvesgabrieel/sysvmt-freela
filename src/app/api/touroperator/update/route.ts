@@ -28,6 +28,7 @@ export async function PUT(request: Request) {
         password: data.password,
         upfrontComission: data.upfrontComission,
         installmentComission: data.installmentComission,
+        observation: data.observation,
       },
     });
 

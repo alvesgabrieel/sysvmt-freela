@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { IMaskInput } from "react-imask"; // Importe o IMaskInput
 import { toast } from "sonner";
 
-import Metrics from "@/app/components/metrics";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -199,8 +198,7 @@ const Vendedores = () => {
       <div className="flex-1 space-y-6 p-6">
         {/* Barra de cima */}
         <TopBar />
-        {/* Cards de métricas */}
-        <Metrics />
+
         <RegisterSallerDialog />
 
         {/* Filtros */}
@@ -242,9 +240,9 @@ const Vendedores = () => {
               onChange={(e) =>
                 setFilters({ ...filters, state: e.target.value })
               }
-              className="rounded border p-2"
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="">Selecione um estado</option>
+              <option value="">Estado</option>
               {states.map((state) => (
                 <option key={state.id} value={state.nome}>
                   {state.nome}
@@ -254,10 +252,10 @@ const Vendedores = () => {
             <select
               value={filters.city}
               onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-              className="rounded border p-2"
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={!filters.state} // Desabilita se nenhum estado for selecionado
             >
-              <option value="">Selecione uma cidade</option>
+              <option value="">Cidade</option>
               {cities.map((city) => (
                 <option key={city.id} value={city.nome}>
                   {city.nome}
@@ -266,10 +264,10 @@ const Vendedores = () => {
             </select>
             <IMaskInput
               mask="(00) 00000-0000" // Máscara para telefone
-              placeholder="(00) 00000-0000"
+              placeholder="Telefone"
               value={filters.phone}
               onAccept={(value) => setFilters({ ...filters, phone: value })}
-              className="rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
             <Button onClick={applyFilters} variant="outline">
               Buscar
@@ -317,7 +315,8 @@ const Vendedores = () => {
                         <Button
                           variant="destructive"
                           size="icon"
-                          onClick={() => handleDeleteSaller(saller.id)} // Função de exclusão
+                          onClick={() => handleDeleteSaller(saller.id)}
+                          className="ml-3"
                         >
                           <TrashIcon className="h-4 w-4" />
                         </Button>

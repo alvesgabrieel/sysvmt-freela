@@ -10,8 +10,8 @@ const poppins = Poppins({
   subsets: ["latin"],
 });
 export const metadata: Metadata = {
-  title: "SysVMT V2.0",
-  description: "SysVMT V2.0",
+  title: "SysVMT v2.0",
+  description: "SysVMT v2.0",
 };
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="pt-br">
       <body className={`${poppins.className} antialiased`}>
         {children}
-        <Toaster richColors/>
+        <Toaster richColors />
       </body>
     </html>
   );

@@ -74,7 +74,7 @@ export const EditCompanionDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Editar cliente</DialogTitle>
+          <DialogTitle>Editar acompanhante</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
@@ -111,10 +111,10 @@ export const EditCompanionDialog = ({
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancelar
+            <Button onClick={onClose}>Cancelar</Button>
+            <Button onClick={handleSave} variant="outline">
+              Salvar
             </Button>
-            <Button onClick={handleSave}>Salvar</Button>
           </div>
         </div>
       </DialogContent>

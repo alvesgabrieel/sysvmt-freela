@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -89,15 +88,12 @@ const RegisterHostingDialog = () => {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" onClick={() => setIsOpen(true)}>
-          Cadastrar Hospedagem
+          Cadastrar hospedagem
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
         <DialogHeader>
-          <DialogTitle>Cadastrar Hospedagem</DialogTitle>
-          <DialogDescription>
-            Preencha as informações abaixo e cadastre uma hospedagem.
-          </DialogDescription>
+          <DialogTitle>Cadastrar hospedagem</DialogTitle>
         </DialogHeader>
 
         {/* Conteúdo das Abas */}
@@ -123,12 +119,12 @@ const RegisterHostingDialog = () => {
             </Label>
             <select
               id="estado"
-              className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={state}
               onChange={(e) => setState(e.target.value)}
               required
             >
-              <option value="">Selecione um estado</option>
+              <option value=""></option>
               {states.map((state) => (
                 <option key={state.id} value={state.nome}>
                   {state.nome}
@@ -142,12 +138,12 @@ const RegisterHostingDialog = () => {
             </Label>
             <select
               id="cidade"
-              className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={city}
               onChange={(e) => setCity(e.target.value)}
               disabled={!state}
             >
-              <option value="">Selecione uma cidade</option>
+              <option value=""></option>
               {cities.map((c) => (
                 <option key={c.id} value={c.nome}>
                   {c.nome}
@@ -161,15 +157,16 @@ const RegisterHostingDialog = () => {
             </Label>
             <textarea
               id="observacao"
-              className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={4} // Define o número de linhas visíveis
-              placeholder="Digite suas observações..."
+              className="col-span-3 rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={4}
               value={observation}
               onChange={(e) => setObservation(e.target.value)}
             />
           </div>
           <DialogFooter>
-            <Button type="submit">Cadastrar hospedagem</Button>
+            <Button type="submit" variant="outline">
+              Cadastrar hospedagem
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

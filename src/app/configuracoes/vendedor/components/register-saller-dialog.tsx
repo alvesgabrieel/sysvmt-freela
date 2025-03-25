@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -181,14 +180,11 @@ export default function RegisterSallerDialog() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline">Cadastrar Vendedor</Button>
+        <Button variant="outline">Cadastrar vendedor</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
         <DialogHeader>
-          <DialogTitle>Cadastrar Vendedor</DialogTitle>
-          <DialogDescription>
-            Preencha as informações do vendedor abaixo.
-          </DialogDescription>
+          <DialogTitle>Cadastrar vendedor</DialogTitle>
         </DialogHeader>
 
         {/* Abas para Navegação */}
@@ -246,8 +242,7 @@ export default function RegisterSallerDialog() {
                   mask="000.000.000-00" // Máscara para CPF
                   id="cpf"
                   type="text"
-                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="000.000.000-00"
+                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -258,8 +253,7 @@ export default function RegisterSallerDialog() {
                   mask="000.000.000" // Máscara para RG
                   id="rg"
                   type="text"
-                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="000.000.000"
+                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -270,8 +264,7 @@ export default function RegisterSallerDialog() {
                   mask="(00) 00000-0000" // Máscara para Telefone
                   id="telefone"
                   type="text"
-                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="(00) 00000-0000"
+                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -280,9 +273,8 @@ export default function RegisterSallerDialog() {
                 </Label>
                 <textarea
                   id="observacao"
-                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="col-span-3 rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={4}
-                  placeholder="Digite suas observações..."
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -308,12 +300,12 @@ export default function RegisterSallerDialog() {
                 </Label>
                 <select
                   id="estado"
-                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={selectedState}
                   onChange={(e) => setSelectedState(e.target.value)}
                   required
                 >
-                  <option value="">Selecione um estado</option>
+                  <option value=""></option>
                   {states.map((state) => (
                     <option key={state.id} value={state.nome}>
                       {state.nome}
@@ -327,13 +319,13 @@ export default function RegisterSallerDialog() {
                 </Label>
                 <select
                   id="cidade"
-                  className="col-span-3 rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={selectedCity}
                   onChange={(e) => setSelectedCity(e.target.value)}
                   required
                   disabled={!selectedState}
                 >
-                  <option value="">Selecione uma cidade</option>
+                  <option value=""></option>
                   {cities.map((city) => (
                     <option key={city.id} value={city.nome}>
                       {city.nome}
@@ -371,9 +363,9 @@ export default function RegisterSallerDialog() {
                   </Label>
                   <select
                     id={`operadora-${index}`}
-                    className="flex-1 rounded-md border p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-96 rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="">Selecione uma operadora</option>
+                    <option value=""></option>
                     <option value="1">Operadora 1</option>
                     <option value="2">Operadora 2</option>
                     <option value="3">Operadora 3</option>
@@ -417,8 +409,8 @@ export default function RegisterSallerDialog() {
         </ScrollArea>
 
         <DialogFooter>
-          <Button type="button" onClick={handleSubmit}>
-            Salvar Vendedor
+          <Button type="button" onClick={handleSubmit} variant="outline">
+            Cadastrar vendedor
           </Button>
         </DialogFooter>
       </DialogContent>
