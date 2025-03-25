@@ -24,31 +24,72 @@ const RegisterTourOperatorDialog = () => {
   const [site, setSite] = useState<string>("");
   const [login, setLogin] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+
   const [upfrontComission, setUpfrontComission] = useState<string>("");
   const [installmentComission, setInstallmentComission] = useState<string>("");
+
   const [observation, setObservation] = useState<string>("");
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
-  const handleFloatInput = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    setter: React.Dispatch<React.SetStateAction<string>>,
-  ) => {
-    const value = e.target.value;
+  // const [value, setValue] = useState("");
 
-    // Permite:
-    // - Números (0-9)
-    // - Máximo uma vírgula
-    // - Não permite pontos
-    if (/^\d*,?\d*$/.test(value)) {
-      setter(value);
+  // const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const input = e.target.value.replace(/\D/g, ""); // Remove tudo que não for número
+
+  //   if (input === "") {
+  //     setValue(""); // Se o campo estiver vazio, limpa o valor
+  //   } else if (input.length === 1) {
+  //     // Caso tenha apenas 1 dígito, apenas exibe o número
+  //     setValue(input);
+  //   } else if (input.length === 2) {
+  //     // Se tiver 2 dígitos, coloca o ponto depois do primeiro
+  //     setValue(input.slice(0, 1) + "." + input.slice(1));
+  //   } else if (input.length > 2) {
+  //     // Se tiver 3 ou mais dígitos, coloca o ponto depois do segundo dígito
+  //     setValue(input.slice(0, 2) + "." + input.slice(2, 5)); // Limita a 3 casas decimais
+  //   }
+  // };
+
+  const formatCommissionInput = (value: string) => {
+    const input = value.replace(/\D/g, ""); // Remove tudo que não for número
+
+    if (input === "") {
+      return ""; // Se o campo estiver vazio, retorna vazio
+    } else if (input.length === 1) {
+      return input; // Caso tenha apenas 1 dígito
+    } else if (input.length === 2) {
+      return input.slice(0, 1) + "." + input.slice(1); // 1 dígito antes do ponto
+    } else {
+      return input.slice(0, 2) + "." + input.slice(2, 5); // 2 dígitos antes do ponto
     }
   };
 
+  const handleCommissionChange = (
+    value: string,
+    setter: React.Dispatch<React.SetStateAction<string>>,
+  ) => {
+    setter(formatCommissionInput(value));
+  };
+
+  // const handleFloatInput = (
+  //   e: React.ChangeEvent<HTMLInputElement>,
+  //   setter: React.Dispatch<React.SetStateAction<string>>,
+  // ) => {
+  //   const value = e.target.value;
+
+  //   // Permite:
+  //   // - Números (0-9)
+  //   // - Máximo um ponto decimal
+  //   // - Valores vazios
+  //   if (/^(\d+)?([.]?\d{0,2})?$/.test(value) || value === "") {
+  //     setter(value);
+  //   }
+  // };
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const formatForSubmit = (value: string) =>
-      value ? parseFloat(value.replace(",", ".")) : 0;
+    // const formatForSubmit = (value: string) =>
+    //   value ? parseFloat(value.replace(",", ".")) : 0;
 
     const response = await fetch("/api/touroperator/create", {
       method: "POST",
@@ -63,8 +104,10 @@ const RegisterTourOperatorDialog = () => {
         site,
         login,
         password,
-        upfrontComission: formatForSubmit(upfrontComission),
-        installmentComission: formatForSubmit(installmentComission),
+        upfrontComission: upfrontComission ? parseFloat(upfrontComission) : 0,
+        installmentComission: installmentComission
+          ? parseFloat(installmentComission)
+          : 0,
         observation,
       }),
     });
@@ -200,9 +243,12 @@ const RegisterTourOperatorDialog = () => {
             <Input
               id="comissao-a-vista"
               type="text"
+              inputMode="decimal"
               className="col-span-3"
               value={upfrontComission}
-              onChange={(e) => handleFloatInput(e, setUpfrontComission)}
+              onChange={(e) =>
+                handleCommissionChange(e.target.value, setUpfrontComission)
+              }
               required
             />
           </div>
@@ -213,22 +259,26 @@ const RegisterTourOperatorDialog = () => {
             <Input
               id="comissao-parcelada"
               type="text"
+              inputMode="decimal"
               className="col-span-3"
               value={installmentComission}
-              onChange={(e) => handleFloatInput(e, setInstallmentComission)}
+              onChange={(e) =>
+                handleCommissionChange(e.target.value, setInstallmentComission)
+              }
               required
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="observacao" className="text-right">
+
+          <div className="grid grid-cols-4 gap-4">
+            <Label htmlFor="observacao" className="self-start pt-2 text-right">
               Observação
             </Label>
             <textarea
               id="observacao"
               className="col-span-3 rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={4}
-              value={observation}
-              onChange={(e) => setObservation(e.target.value)}
+              value={observation} // Agora controlado
+              onChange={(e) => setObservation(e.target.value)} // Atualizando o estado
             />
           </div>
           <DialogFooter>

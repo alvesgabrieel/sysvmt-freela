@@ -199,7 +199,7 @@ const Operadoras = () => {
         {/* Tabela de Operadoras */}
         <Card>
           <CardHeader>
-            <CardTitle>Vendedores Filtrados</CardTitle>
+            <CardTitle>Operadoras Filtradas</CardTitle>
           </CardHeader>
           <CardContent>
             {tourOperators && tourOperators.length > 0 ? (

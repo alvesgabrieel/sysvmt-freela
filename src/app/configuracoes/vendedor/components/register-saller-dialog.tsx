@@ -24,6 +24,20 @@ export default function RegisterSallerDialog() {
   ]);
   const [file, setFile] = useState<File | null>(null);
 
+  const [formData, setFormData] = useState({
+    name: "",
+    login: "",
+    email: "",
+    cpf: "",
+    rg: "",
+    phone: "",
+    observation: "",
+    pix: "",
+    adress: "",
+    number: "",
+    complement: "",
+  });
+
   // Estados e cidades
   const [states, setStates] = useState<{ id: number; nome: string }[]>([]);
   const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
@@ -78,102 +92,67 @@ export default function RegisterSallerDialog() {
 
   const handleSubmit = async () => {
     // Validação da foto
+
     if (file && !file.type.startsWith("image/")) {
-      alert("Por favor, selecione um arquivo de imagem.");
+      toast.error("Por favor, selecione um arquivo de imagem válido.");
       return;
     }
 
-    const formData = new FormData();
+    const dataToSend = new FormData();
 
-    // Adiciona os campos do formulário ao FormData
-    formData.append(
-      "name",
-      (document.getElementById("nome-vendedor") as HTMLInputElement).value,
-    );
-    formData.append(
-      "login",
-      (document.getElementById("login") as HTMLInputElement).value,
-    );
-    formData.append(
-      "email",
-      (document.getElementById("email") as HTMLInputElement).value,
-    );
-    formData.append(
-      "cpf",
-      (document.getElementById("cpf") as HTMLInputElement).value,
-    );
-    formData.append(
-      "rg",
-      (document.getElementById("rg") as HTMLInputElement).value,
-    );
-    formData.append(
-      "phone",
-      (document.getElementById("telefone") as HTMLInputElement).value,
-    );
-    formData.append(
-      "observation",
-      (document.getElementById("observacao") as HTMLTextAreaElement).value,
-    );
-    formData.append(
-      "pix",
-      (document.getElementById("pix") as HTMLInputElement).value,
-    );
-    formData.append("state", selectedState);
-    formData.append("city", selectedCity);
-    formData.append(
-      "adress",
-      (document.getElementById("logradouro") as HTMLInputElement).value,
-    );
-    formData.append(
-      "number",
-      (document.getElementById("numero") as HTMLInputElement).value,
-    );
-    formData.append(
-      "complement",
-      (document.getElementById("complemento") as HTMLInputElement).value,
-    );
+    // Adiciona os dados do formulário
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value) dataToSend.append(key, value);
+    });
 
-    // Adiciona a foto ao FormData, se existir
+    // Adiciona estados e cidades
+    if (selectedState) dataToSend.append("state", selectedState);
+    if (selectedCity) dataToSend.append("city", selectedCity);
+
+    // Adiciona comissões como JSON
+    if (comissoes.length > 0) {
+      dataToSend.append("commissions", JSON.stringify(comissoes));
+    }
+
+    // Adiciona a foto se existir
     if (file) {
-      formData.append("photo", file);
+      dataToSend.append("photo", file);
     }
 
     try {
       const response = await fetch("/api/saller/create", {
         method: "POST",
-        body: formData,
+        body: dataToSend,
       });
 
       const result = await response.json();
-      console.log(result);
 
       if (response.ok) {
         toast.success("Vendedor cadastrado com sucesso!");
-
-        // Limpa o formulário após o sucesso
-        (document.getElementById("nome-vendedor") as HTMLInputElement).value =
-          "";
-        (document.getElementById("login") as HTMLInputElement).value = "";
-        (document.getElementById("email") as HTMLInputElement).value = "";
-        (document.getElementById("cpf") as HTMLInputElement).value = "";
-        (document.getElementById("rg") as HTMLInputElement).value = "";
-        (document.getElementById("telefone") as HTMLInputElement).value = "";
-        (document.getElementById("observacao") as HTMLTextAreaElement).value =
-          "";
-        (document.getElementById("pix") as HTMLInputElement).value = "";
+        // Resetar todos os estados
+        setFormData({
+          name: "",
+          login: "",
+          email: "",
+          cpf: "",
+          rg: "",
+          phone: "",
+          observation: "",
+          pix: "",
+          adress: "",
+          number: "",
+          complement: "",
+        });
         setSelectedState("");
         setSelectedCity("");
-        (document.getElementById("logradouro") as HTMLInputElement).value = "";
-        (document.getElementById("numero") as HTMLInputElement).value = "";
-        (document.getElementById("complemento") as HTMLInputElement).value = "";
         setFile(null);
         setComissoes([{ operadora: "", aVista: "", parcelado: "" }]);
       } else {
-        toast.error(`Erro: ${result.error}`);
+        toast.error(result.message || "Erro ao cadastrar vendedor");
       }
     } catch (error) {
       console.error("Erro ao enviar dados:", error);
-      toast.error("Erro ao cadastrar vendedor. Tente novamente.");
+      toast.error("Erro ao conectar com o servidor");
     }
   };
 
@@ -220,19 +199,43 @@ export default function RegisterSallerDialog() {
                 <Label htmlFor="nome-vendedor" className="text-right">
                   Nome
                 </Label>
-                <Input id="nome-vendedor" type="text" className="col-span-3" />
+                <Input
+                  id="nome-vendedor"
+                  type="text"
+                  className="col-span-3"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="login" className="text-right">
                   Login
                 </Label>
-                <Input id="login" type="text" className="col-span-3" />
+                <Input
+                  id="login"
+                  type="text"
+                  className="col-span-3"
+                  value={formData.login}
+                  onChange={(e) =>
+                    setFormData({ ...formData, login: e.target.value })
+                  }
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="email" className="text-right">
                   E-mail
                 </Label>
-                <Input id="email" type="text" className="col-span-3" />
+                <Input
+                  id="email"
+                  type="text"
+                  className="col-span-3"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="cpf" className="text-right">
@@ -243,6 +246,8 @@ export default function RegisterSallerDialog() {
                   id="cpf"
                   type="text"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.cpf}
+                  onAccept={(value) => setFormData({ ...formData, cpf: value })}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -254,6 +259,8 @@ export default function RegisterSallerDialog() {
                   id="rg"
                   type="text"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.rg}
+                  onAccept={(value) => setFormData({ ...formData, rg: value })}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -265,23 +272,42 @@ export default function RegisterSallerDialog() {
                   id="telefone"
                   type="text"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.phone}
+                  onAccept={(value) =>
+                    setFormData({ ...formData, phone: value })
+                  }
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="observacao" className="text-right">
+              <div className="grid grid-cols-4 gap-4">
+                <Label
+                  htmlFor="observacao"
+                  className="self-start pt-2 text-right"
+                >
                   Observação
                 </Label>
                 <textarea
                   id="observacao"
                   className="col-span-3 rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={4}
+                  value={formData.observation}
+                  onChange={(e) =>
+                    setFormData({ ...formData, observation: e.target.value })
+                  }
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="pix" className="text-right">
                   Pix
                 </Label>
-                <Input id="pix" type="text" className="col-span-3" />
+                <Input
+                  id="pix"
+                  type="text"
+                  className="col-span-3"
+                  value={formData.pix}
+                  onChange={(e) =>
+                    setFormData({ ...formData, pix: e.target.value })
+                  }
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="foto" className="text-right">
@@ -337,19 +363,43 @@ export default function RegisterSallerDialog() {
                 <Label htmlFor="logradouro" className="text-right">
                   Logradouro
                 </Label>
-                <Input id="logradouro" type="text" className="col-span-3" />
+                <Input
+                  id="logradouro"
+                  type="text"
+                  className="col-span-3"
+                  value={formData.adress}
+                  onChange={(e) =>
+                    setFormData({ ...formData, adress: e.target.value })
+                  }
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="numero" className="text-right">
                   Número
                 </Label>
-                <Input id="numero" type="text" className="col-span-3" />
+                <Input
+                  id="numero"
+                  type="text"
+                  className="col-span-3"
+                  value={formData.number}
+                  onChange={(e) =>
+                    setFormData({ ...formData, number: e.target.value })
+                  }
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="complemento" className="text-right">
                   Complemento
                 </Label>
-                <Input id="complemento" type="text" className="col-span-3" />
+                <Input
+                  id="complemento"
+                  type="text"
+                  className="col-span-3"
+                  value={formData.complement}
+                  onChange={(e) =>
+                    setFormData({ ...formData, complement: e.target.value })
+                  }
+                />
               </div>
             </div>
           )}

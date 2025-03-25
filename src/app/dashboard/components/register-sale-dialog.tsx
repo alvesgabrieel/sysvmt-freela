@@ -261,7 +261,7 @@ export default function RegisterSaleDialog() {
             <div className="space-y-4 p-5">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="cliente" className="text-right">
-                  Id da operadora
+                  Id na operadora
                 </Label>
                 <Input id="cliente" className="col-span-3" />
               </div>
@@ -404,14 +404,17 @@ export default function RegisterSaleDialog() {
                   <option value="3">Cashback 3</option>
                 </select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="observacao" className="text-right">
-                  Observações
+              <div className="grid grid-cols-4 gap-4">
+                <Label
+                  htmlFor="observacao"
+                  className="self-start pt-2 text-right"
+                >
+                  Observação
                 </Label>
                 <textarea
                   id="observacao"
-                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  rows={4} // Define o número de linhas visíveis
+                  className="col-span-3 rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">

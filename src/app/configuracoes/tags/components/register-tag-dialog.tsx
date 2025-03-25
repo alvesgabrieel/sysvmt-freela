@@ -24,9 +24,8 @@ const RegisterTagDialog: React.FC<RegisterTagDialogProps> = ({
 }) => {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#000000");
-  const [isOpen, setIsOpen] = useState(false); // Estado para controlar a visibilidade do modal
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Função para lidar com o envio do formulário
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -41,9 +40,9 @@ const RegisterTagDialog: React.FC<RegisterTagDialogProps> = ({
     if (response.ok) {
       const result = await response.json();
       toast.success(result.message);
-      onTagCreated(result.tag); // Atualiza a lista no componente pai
-      setIsOpen(false); // Fecha o modal após o cadastro
-      setName(""); // Limpa os campos do formulário
+      onTagCreated(result.tag);
+      setIsOpen(false);
+      setName("");
       setColor("#000000");
     } else {
       const error = await response.json();
@@ -58,12 +57,11 @@ const RegisterTagDialog: React.FC<RegisterTagDialogProps> = ({
           Cadastrar tag
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[320px] sm:max-w-[350px]">
+      <DialogContent className="max-w-[500px] sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Cadastrar tag</DialogTitle>
         </DialogHeader>
 
-        {/* Formulário */}
         <form onSubmit={handleSubmit} className="space-y-4 p-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
@@ -82,13 +80,22 @@ const RegisterTagDialog: React.FC<RegisterTagDialogProps> = ({
             <Label htmlFor="color" className="text-right">
               Cor
             </Label>
-            <Input
-              id="color"
-              type="color"
-              className="col-span-3"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-            />
+            <div className="col-span-3 flex items-center">
+              <div className="relative">
+                <input
+                  id="color"
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="absolute h-10 w-10 cursor-pointer opacity-0"
+                />
+                <div
+                  className="h-10 w-10 rounded-full border border-gray-300"
+                  style={{ backgroundColor: color }}
+                />
+              </div>
+              <span className="ml-2 text-sm text-gray-600">{color}</span>
+            </div>
           </div>
 
           <DialogFooter className="justify-end">

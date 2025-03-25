@@ -35,165 +35,13 @@ const initialOrders = [
     totalDesconto: "R$ 100",
     totalLiquido: "R$ 800",
   },
-  {
-    id: "U2349SD12",
-    data: "19/02/2025",
-    checkin: "19:20:22",
-    checkout: "18:20:22",
-    operadora: "operadora2",
-    cliente: "Lucas",
-    ingresso: "ingresso1",
-    hospedagem: "hospedagem1",
-    totalBruto: "R$ 1000",
-    totalCashback: "R$ 100",
-    totalDesconto: "R$ 100",
-    totalLiquido: "R$ 800",
-  },
-  {
-    id: "U2349SD13",
-    data: "19/02/2025",
-    checkin: "19:20:22",
-    checkout: "18:20:22",
-    operadora: "operadora2",
-    cliente: "Lucas",
-    ingresso: "ingresso1",
-    hospedagem: "hospedagem1",
-    totalBruto: "R$ 1000",
-    totalCashback: "R$ 100",
-    totalDesconto: "R$ 100",
-    totalLiquido: "R$ 800",
-  },
-  {
-    id: "U2349SD14",
-    data: "19/02/2025",
-    checkin: "19:20:22",
-    checkout: "18:20:22",
-    operadora: "operadora2",
-    cliente: "Lucas",
-    ingresso: "ingresso1",
-    hospedagem: "hospedagem1",
-    totalBruto: "R$ 1000",
-    totalCashback: "R$ 100",
-    totalDesconto: "R$ 100",
-    totalLiquido: "R$ 800",
-  },
-  {
-    id: "U2349SD15",
-    data: "19/02/2025",
-    checkin: "19:20:22",
-    checkout: "18:20:22",
-    operadora: "operadora2",
-    cliente: "Lucas",
-    ingresso: "ingresso1",
-    hospedagem: "hospedagem1",
-    totalBruto: "R$ 1000",
-    totalCashback: "R$ 100",
-    totalDesconto: "R$ 100",
-    totalLiquido: "R$ 800",
-  },
-  {
-    id: "U2349SD16",
-    data: "19/02/2025",
-    checkin: "19:20:22",
-    checkout: "18:20:22",
-    operadora: "operadora2",
-    cliente: "Lucas",
-    ingresso: "ingresso1",
-    hospedagem: "hospedagem1",
-    totalBruto: "R$ 1000",
-    totalCashback: "R$ 100",
-    totalDesconto: "R$ 100",
-    totalLiquido: "R$ 800",
-  },
-  {
-    id: "U2349SD17",
-    data: "19/02/2025",
-    checkin: "19:20:22",
-    checkout: "18:20:22",
-    operadora: "operadora2",
-    cliente: "Lucas",
-    ingresso: "ingresso1",
-    hospedagem: "hospedagem1",
-    totalBruto: "R$ 1000",
-    totalCashback: "R$ 100",
-    totalDesconto: "R$ 100",
-    totalLiquido: "R$ 800",
-  },
-  {
-    id: "U2349SD18",
-    data: "19/02/2025",
-    checkin: "19:20:22",
-    checkout: "18:20:22",
-    operadora: "operadora2",
-    cliente: "Lucas",
-    ingresso: "ingresso1",
-    hospedagem: "hospedagem1",
-    totalBruto: "R$ 1000",
-    totalCashback: "R$ 100",
-    totalDesconto: "R$ 100",
-    totalLiquido: "R$ 800",
-  },
-  {
-    id: "U2349SD19",
-    data: "19/02/2025",
-    checkin: "19:20:22",
-    checkout: "18:20:22",
-    operadora: "operadora2",
-    cliente: "Lucas",
-    ingresso: "ingresso1",
-    hospedagem: "hospedagem1",
-    totalBruto: "R$ 1000",
-    totalCashback: "R$ 100",
-    totalDesconto: "R$ 100",
-    totalLiquido: "R$ 800",
-  },
-  {
-    id: "U2349SD20",
-    data: "19/02/2025",
-    checkin: "19:20:22",
-    checkout: "18:20:22",
-    operadora: "operadora2",
-    cliente: "Lucas",
-    ingresso: "ingresso1",
-    hospedagem: "hospedagem1",
-    totalBruto: "R$ 1000",
-    totalCashback: "R$ 100",
-    totalDesconto: "R$ 100",
-    totalLiquido: "R$ 800",
-  },
-  {
-    id: "U2349SD21",
-    data: "19/02/2025",
-    checkin: "19:20:22",
-    checkout: "18:20:22",
-    operadora: "operadora2",
-    cliente: "Lucas",
-    ingresso: "ingresso1",
-    hospedagem: "hospedagem1",
-    totalBruto: "R$ 1000",
-    totalCashback: "R$ 100",
-    totalDesconto: "R$ 100",
-    totalLiquido: "R$ 800",
-  },
-  {
-    id: "U2349SD22",
-    data: "19/02/2025",
-    checkin: "19:20:22",
-    checkout: "18:20:22",
-    operadora: "operadora2",
-    cliente: "Lucas",
-    ingresso: "ingresso1",
-    hospedagem: "hospedagem1",
-    totalBruto: "R$ 1000",
-    totalCashback: "R$ 100",
-    totalDesconto: "R$ 100",
-    totalLiquido: "R$ 800",
-  },
+  // ... (mantenha os outros objetos de pedidos como estão)
 ];
 
 export default function Dashboard() {
+  // Estado dos filtros com rótulos personalizados
   const [filters, setFilters] = useState({
-    id: "",
+    "id na operadora": "",
     data: "",
     checkin: "",
     checkout: "",
@@ -203,9 +51,20 @@ export default function Dashboard() {
     hospedagem: "",
   });
 
+  // Mapeamento entre rótulos exibidos e chaves reais dos dados
+  const filterKeysMap = {
+    "id na operadora": "id",
+    data: "data",
+    checkin: "checkin",
+    checkout: "checkout",
+    operadora: "operadora",
+    cliente: "cliente",
+    ingresso: "ingresso",
+    hospedagem: "hospedagem",
+  };
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1); // Estado para a página atual
-  // const [itemsPerPage, setItemsPerPage] = useState(10); // Estado para itens por página
+  const [currentPage, setCurrentPage] = useState(1);
   const router = useRouter();
 
   useEffect(() => {
@@ -226,13 +85,16 @@ export default function Dashboard() {
 
   // Filtra os pedidos com base nos filtros aplicados
   const filteredOrders = initialOrders.filter((order) =>
-    Object.keys(filters).every(
-      (key) =>
-        filters[key as keyof typeof filters] === "" ||
-        order[key as keyof typeof order]
+    Object.keys(filterKeysMap).every((displayKey) => {
+      const realKey = filterKeysMap[displayKey as keyof typeof filterKeysMap];
+      return (
+        filters[displayKey as keyof typeof filters] === "" ||
+        order[realKey as keyof typeof order]
+          .toString()
           .toLowerCase()
-          .includes(filters[key as keyof typeof filters].toLowerCase()),
-    ),
+          .includes(filters[displayKey as keyof typeof filters].toLowerCase())
+      );
+    }),
   );
 
   // Lógica de paginação
@@ -240,37 +102,38 @@ export default function Dashboard() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Função para mudar de página
-  // const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
   return (
     <div className="flex">
       <Sidebar />
       <div className="flex-1 space-y-6 p-6">
-        {/* Barra de cima  */}
+        {/* Barra de cima */}
         <TopBar />
+
         {/* Cards de métricas */}
         <Metrics />
-        {/* Botão para abrir o dialog para cadastar venda */}
+
+        {/* Botão para abrir o dialog para cadastrar venda */}
         <RegisterSaleDialog />
+
         {/* Filtros */}
         <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-4 gap-4">
-            {Object.keys(filters).map((key) => (
+            {Object.keys(filters).map((displayKey) => (
               <Input
-                key={key}
-                placeholder={key.charAt(0).toUpperCase() + key.slice(1)}
-                value={filters[key as keyof typeof filters]}
+                key={displayKey}
+                placeholder={displayKey}
+                value={filters[displayKey as keyof typeof filters]}
                 onChange={(e) =>
-                  setFilters({ ...filters, [key]: e.target.value })
+                  setFilters({ ...filters, [displayKey]: e.target.value })
                 }
               />
             ))}
           </CardContent>
         </Card>
+
         {/* Tabela de vendas filtradas com paginação */}
         <Card>
           <CardHeader>
@@ -280,19 +143,17 @@ export default function Dashboard() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {Object.keys(filters).map((key) => (
-                    <TableHead key={key}>
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
-                    </TableHead>
+                  {Object.keys(filterKeysMap).map((displayKey) => (
+                    <TableHead key={displayKey}>{displayKey}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {currentItems.map((order) => (
                   <TableRow key={order.id}>
-                    {Object.keys(filters).map((key) => (
-                      <TableCell key={key}>
-                        {order[key as keyof typeof order]}
+                    {Object.values(filterKeysMap).map((realKey) => (
+                      <TableCell key={realKey}>
+                        {order[realKey as keyof typeof order]}
                       </TableCell>
                     ))}
                   </TableRow>

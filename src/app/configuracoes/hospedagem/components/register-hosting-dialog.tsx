@@ -151,16 +151,16 @@ const RegisterHostingDialog = () => {
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="observacao" className="text-right">
+          <div className="grid grid-cols-4 gap-4">
+            <Label htmlFor="observacao" className="self-start pt-2 text-right">
               Observação
             </Label>
             <textarea
               id="observacao"
               className="col-span-3 rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={4}
-              value={observation}
-              onChange={(e) => setObservation(e.target.value)}
+              value={observation} // Agora controlado
+              onChange={(e) => setObservation(e.target.value)} // Atualizando o estado
             />
           </div>
           <DialogFooter>
