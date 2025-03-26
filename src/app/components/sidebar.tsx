@@ -1,6 +1,14 @@
 "use client";
 
-import { ChevronDown, DollarSign, FileText, Home, LogOut, Settings, Users } from "lucide-react";
+import {
+  ChevronDown,
+  DollarSign,
+  FileText,
+  Home,
+  LogOut,
+  Settings,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -32,6 +40,7 @@ const menuItems = [
       { name: "Vendedor", path: "/configuracoes/vendedor" },
       { name: "Hospedagem", path: "/configuracoes/hospedagem" },
       { name: "Operadora", path: "/configuracoes/operadora" },
+      { name: "Cashback", path: "/configuracoes/cashback" },
     ],
   },
   {
@@ -71,15 +80,14 @@ export default function Sidebar() {
 
   return (
     <div
-  className={`h-screen bg-[#343a40] shadow-md flex flex-col p-4 transition-all duration-300 sticky top-0 ${
-    isOpen ? "w-64" : "w-18"
-  } overflow-hidden`}
-  onMouseEnter={() => setIsOpen(true)}
-  onMouseLeave={handleMouseLeave}
->
-
+      className={`sticky top-0 flex h-screen flex-col bg-[#343a40] p-4 shadow-md transition-all duration-300 ${
+        isOpen ? "w-64" : "w-18"
+      } overflow-hidden`}
+      onMouseEnter={() => setIsOpen(true)}
+      onMouseLeave={handleMouseLeave}
+    >
       <h2
-        className={`text-2xl font-bold text-center mb-6 transition-all text-white ${
+        className={`mb-6 text-center text-2xl font-bold text-white transition-all ${
           isOpen ? "opacity-100" : "opacity-100"
         }`}
       >
@@ -92,14 +100,18 @@ export default function Sidebar() {
           <div key={item.name}>
             <button
               onClick={() => toggleMenu(item.name)}
-              className="flex items-center gap-4 p-3 w-full rounded-lg hover:bg-gray-800 transition"
+              className="flex w-full items-center gap-4 rounded-lg p-3 transition hover:bg-gray-800"
             >
-              <item.icon className="w-5 h-5 text-white" />
-              <span className={`flex-1 transition-opacity text-white ${isOpen ? "opacity-100" : "hidden"}`}>
+              <item.icon className="h-5 w-5 text-white" />
+              <span
+                className={`flex-1 text-white transition-opacity ${isOpen ? "opacity-100" : "hidden"}`}
+              >
                 {item.name}
               </span>
               {isOpen && (
-                <ChevronDown className={`transition-transform text-white ${activeMenu === item.name ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`text-white transition-transform ${activeMenu === item.name ? "rotate-180" : ""}`}
+                />
               )}
             </button>
             {activeMenu === item.name && (
@@ -108,7 +120,7 @@ export default function Sidebar() {
                   <Link
                     key={sub.name}
                     href={sub.path}
-                    className="block p-2 text-sm text-white hover:bg-gray-800 rounded"
+                    className="block rounded p-2 text-sm text-white hover:bg-gray-800"
                   >
                     {sub.name}
                   </Link>
@@ -123,10 +135,12 @@ export default function Sidebar() {
       <div className="mt-auto">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-4 p-3 w-full rounded-lg hover:bg-red-700 transition"
+          className="flex w-full items-center gap-4 rounded-lg p-3 transition hover:bg-red-700"
         >
-          <LogOut className="w-5 h-5 text-white" />
-          <span className={`flex-1 transition-opacity text-white ${isOpen ? "opacity-100" : "hidden"}`}>
+          <LogOut className="h-5 w-5 text-white" />
+          <span
+            className={`flex-1 text-white transition-opacity ${isOpen ? "opacity-100" : "hidden"}`}
+          >
             Sair
           </span>
         </button>
