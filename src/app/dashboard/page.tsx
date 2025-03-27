@@ -41,7 +41,7 @@ const initialOrders = [
 export default function Dashboard() {
   // Estado dos filtros com rótulos personalizados
   const [filters, setFilters] = useState({
-    "id na operadora": "",
+    "Id na Operadora": "",
     data: "",
     checkin: "",
     checkout: "",
@@ -53,7 +53,7 @@ export default function Dashboard() {
 
   // Mapeamento entre rótulos exibidos e chaves reais dos dados
   const filterKeysMap = {
-    "id na operadora": "id",
+    "Id na Operadora": "id",
     data: "data",
     checkin: "checkin",
     checkout: "checkout",

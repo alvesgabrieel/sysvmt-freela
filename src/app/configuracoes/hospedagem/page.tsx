@@ -9,6 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import Loader from "@/app/components/loader";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,8 @@ const Hospedagem = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedHosting, setSelectedHosting] = useState<Hosting | null>(null);
 
+  const [totalPages, setTotalPages] = useState(1);
+
   // Função para abrir o diálogo de edição
   const handleViewMore = (hosting: Hosting) => {
     setSelectedHosting(hosting); // Define o ingresso selecionado
@@ -79,6 +82,10 @@ const Hospedagem = () => {
       ),
     );
   };
+
+  useEffect(() => {
+    fetchHosting(); // Busca tudo (paginação já está ativa por padrão)
+  }, []); // Executa apenas no mount
 
   // Busca os estados ao carregar a página
   useEffect(() => {
@@ -110,16 +117,6 @@ const Hospedagem = () => {
     }
   };
 
-  //   const handleHostingCreated = (newHosting: {
-  //     id: number;
-  //     name: string;
-  //     state: string;
-  //     city: string;
-  //     observation: string;
-  //   }) => {
-  //     setHosting((prevHosting) => [...prevHosting, newHosting]);
-  //   };
-
   const fetchHosting = async () => {
     try {
       const queryParams = new URLSearchParams({
@@ -128,23 +125,21 @@ const Hospedagem = () => {
         itemsPerPage: itemsPerPage.toString(),
       }).toString();
 
-      const response = await fetch(`/api/hosting/filter?${queryParams}`, {
+      const response = await fetch(`/api/hosting/read?${queryParams}`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
 
       if (response.ok) {
-        const result = await response.json();
-        setHosting(result.hostings);
-        console.log("Resposta da API:", result);
+        const { hostings, totalPages } = await response.json();
+        setHosting(hostings);
+        setTotalPages(totalPages); // Armazena o total de páginas
       } else {
-        toast.error("Erro ao carregar as hospedagens");
+        toast.error("Erro ao carregar hospedagens");
       }
     } catch (err) {
-      toast.error("Erro ao carregar as hospedagens");
-      console.error("Erro ao carregar as hospedagens", err);
+      toast.error("Erro na requisição");
+      console.error(err);
     }
   };
 
@@ -212,11 +207,6 @@ const Hospedagem = () => {
     fetchHosting(); // Busca os tickets com os filtros aplicados
   };
 
-  // Lógica de paginação
-  const indexOfLastHosting = currentPage * itemsPerPage;
-  const indexOfFirstHosting = indexOfLastHosting - itemsPerPage;
-  const currentHostig = hosting.slice(indexOfFirstHosting, indexOfLastHosting);
-
   // Funções de navegação de página
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -228,11 +218,8 @@ const Hospedagem = () => {
   };
 
   const handleNextPage = () => {
-    const totalPages = Math.ceil(hosting.length / itemsPerPage);
     if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
-
-  const totalPages = Math.ceil(hosting.length / itemsPerPage);
 
   return (
     <div className="flex">
@@ -319,7 +306,7 @@ const Hospedagem = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentHostig.map((hosting) => (
+                  {hosting.map((hosting) => (
                     <TableRow key={hosting.id}>
                       <TableCell>{hosting.name}</TableCell>
                       <TableCell>{hosting.state}</TableCell>
@@ -347,7 +334,7 @@ const Hospedagem = () => {
                 </TableBody>
               </Table>
             ) : (
-              <p>Nenhuma hospedagem encontrado com os filtros aplicados.</p>
+              <Loader />
             )}
 
             {/* Paginação Personalizada */}

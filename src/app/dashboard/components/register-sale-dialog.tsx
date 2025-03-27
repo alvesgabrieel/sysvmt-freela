@@ -261,7 +261,7 @@ export default function RegisterSaleDialog() {
             <div className="space-y-4 p-5">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="cliente" className="text-right">
-                  Id na operadora
+                  Id na Operadora
                 </Label>
                 <Input id="cliente" className="col-span-3" />
               </div>

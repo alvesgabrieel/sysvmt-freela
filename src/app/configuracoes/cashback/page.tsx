@@ -164,7 +164,7 @@ const CashbackComponent = () => {
             />
             <Input
               type="text"
-              placeholder="Data inicial"
+              placeholder="Data inicial da vigência"
               value={filters.startDate}
               onChange={(e) =>
                 setFilters({ ...filters, startDate: e.target.value })
@@ -172,7 +172,7 @@ const CashbackComponent = () => {
             />
             <Input
               type="text"
-              placeholder="Data final"
+              placeholder="Data final da vigência"
               value={filters.endDate}
               onChange={(e) =>
                 setFilters({ ...filters, endDate: e.target.value })
@@ -212,8 +212,8 @@ const CashbackComponent = () => {
                   <TableRow>
                     <TableHead>ID</TableHead>
                     <TableHead>Nome</TableHead>
-                    <TableHead>Data inicial</TableHead>
-                    <TableHead>Data final</TableHead>
+                    <TableHead>Data inicial da vigência</TableHead>
+                    <TableHead>Data final da vigência</TableHead>
                     <TableHead>Percentual</TableHead>
                     <TableHead>Validade</TableHead>
                   </TableRow>

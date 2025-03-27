@@ -39,7 +39,6 @@ type Ticket = {
 const Ingressos = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [filters, setFilters] = useState({
-    id: "",
     name: "",
     state: "", // Armazena o ID do estado
     city: "", // Armazena o nome da cidade
@@ -198,7 +197,6 @@ const Ingressos = () => {
   const applyFilters = () => {
     // Remove campos vazios dos filtros, mas mantém todas as chaves
     const cleanedFilters = {
-      id: "",
       name: "",
       state: "",
       city: "",
@@ -251,13 +249,6 @@ const Ingressos = () => {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-4 gap-4">
-            <Input
-              type="text"
-              name="id"
-              placeholder="ID"
-              value={filters.id || ""}
-              onChange={handleFilterChange}
-            />
             <Input
               type="text"
               name="name"
