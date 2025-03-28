@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { KeyboardEvent, useEffect, useState } from "react";
 import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
@@ -23,6 +23,9 @@ interface Cashback {
   endDate: string;
   percentage: string;
   validityDays: number;
+  purchaseData: string;
+  checkin: string;
+  checkout: string;
 }
 
 interface EditCashbackDialogProps {
@@ -38,38 +41,68 @@ export const EditCashbackDialog = ({
   onClose,
   onSave,
 }: EditCashbackDialogProps) => {
+  // Converte o valor inicial para o formato de digitação (remove vírgula e símbolo %)
+  const convertInitialValue = (value: string | number): string => {
+    if (typeof value === "number") {
+      // Converte número para string e remove o ponto decimal
+      return String(value).replace(".", "").replace(/,|%/g, "");
+    }
+    return value.replace(/,|%/g, "").replace(".", "");
+  };
+
   const [editedCashback, setEditedCashback] = useState<Cashback>({
     ...cashback,
-    percentage: formatPercentageForDisplay(String(cashback.percentage)),
     startDate: formatBackendDateToFrontend(cashback.startDate),
     endDate: formatBackendDateToFrontend(cashback.endDate),
+    purchaseData: formatBackendDateToFrontend(cashback.purchaseData),
+    checkin: formatBackendDateToFrontend(cashback.checkin),
+    checkout: formatBackendDateToFrontend(cashback.checkout),
   });
 
-  // Formata o valor do banco para exibição (2.5 → "2,5")
-  function formatPercentageForDisplay(
-    value: string | number | null | undefined,
-  ): string {
-    if (typeof value === "number") {
-      return value.toString().replace(".", ",");
+  // State separado para o valor bruto da porcentagem (apenas dígitos)
+  const [percentageInput, setPercentageInput] = useState<string>(() =>
+    convertInitialValue(cashback.percentage || "0"),
+  );
+  // Função para formatar o valor digitado como porcentagem (0,05%, 1,23%, etc)
+  const formatPercentage = (input: string): string => {
+    if (!input) return "";
+
+    const numbers = input.replace(/\D/g, "");
+    const padded = numbers.padStart(3, "0"); // Garante pelo menos 3 dígitos (1 + 2 decimais)
+
+    const integerPart = padded.slice(0, -2) || "0";
+    const decimalPart = padded.slice(-2);
+
+    return `${integerPart},${decimalPart}%`;
+  };
+
+  // Função para lidar com as teclas pressionadas
+  const handlePercentageKeyDown = (
+    e: KeyboardEvent,
+    currentValue: string,
+    setValue: React.Dispatch<React.SetStateAction<string>>,
+  ) => {
+    // Permite apenas números e Backspace
+    if (!/[0-9]|Backspace/.test(e.key)) {
+      e.preventDefault();
+      return;
     }
 
-    if (!value) return "";
+    let newValue = currentValue.replace(/\D/g, "");
 
-    return value.includes(".") ? value.replace(".", ",") : value;
-  }
-
-  const formatPercentageInput = (value: string): string => {
-    const input = value.replace(/\D/g, "");
-
-    if (input === "") {
-      return "";
-    } else if (input.length === 1) {
-      return input;
-    } else if (input.length === 2) {
-      return input.slice(0, 1) + "," + input.slice(1);
+    if (e.key === "Backspace") {
+      newValue = newValue.slice(0, -1);
     } else {
-      return input.slice(0, 2) + "," + input.slice(2, 5);
+      newValue += e.key;
     }
+
+    // Limita o tamanho para evitar números muito grandes
+    if (newValue.length > 5) {
+      // Máximo 999,99%
+      return;
+    }
+
+    setValue(newValue);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,14 +114,6 @@ export const EditCashbackDialog = ({
     setEditedCashback((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handlePercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
-    setEditedCashback((prev) => ({
-      ...prev,
-      percentage: formatPercentageInput(rawValue),
-    }));
-  };
-
   useEffect(() => {
     console.log("Data recebida do backend:", {
       original: cashback.startDate,
@@ -97,24 +122,19 @@ export const EditCashbackDialog = ({
 
     setEditedCashback({
       ...cashback,
-      percentage: formatPercentageForDisplay(cashback.percentage),
-      startDate: formatBackendDateToFrontend(cashback.startDate), // Mantém a formatação
-      endDate: formatBackendDateToFrontend(cashback.endDate), // Mantém a formatação
+      startDate: formatBackendDateToFrontend(cashback.startDate),
+      endDate: formatBackendDateToFrontend(cashback.endDate),
+      purchaseData: formatBackendDateToFrontend(cashback.purchaseData),
+      checkin: formatBackendDateToFrontend(cashback.checkin),
+      checkout: formatBackendDateToFrontend(cashback.checkout),
     });
+
+    // Atualiza o valor bruto da porcentagem quando o cashback muda
+    setPercentageInput(convertInitialValue(cashback.percentage));
   }, [cashback]);
 
   const handleSave = async () => {
     try {
-      if (
-        !editedCashback.name ||
-        !editedCashback.startDate ||
-        !editedCashback.endDate ||
-        !editedCashback.percentage
-      ) {
-        toast.error("Preencha todos os campos obrigatórios");
-        return;
-      }
-
       const startDate = new Date(
         editedCashback.startDate.split("/").reverse().join("-"),
       );
@@ -127,20 +147,12 @@ export const EditCashbackDialog = ({
         return;
       }
 
-      // 3. VALIDAÇÃO DO PERCENTUAL - FORMATO BRASILEIRO (COM VÍRGULA)
-      const percentageValue = editedCashback.percentage;
-
-      // Verifica se tem vírgula e se os números são válidos
-      if (
-        !percentageValue.includes(",") ||
-        isNaN(Number(percentageValue.replace(",", ".")))
-      ) {
-        toast.error("Use o formato brasileiro (ex: 3,2 para 3,2%)");
-        return;
-      }
+      // Prepara os dados para enviar (formato esperado pelo backend)
       const payload = {
         ...editedCashback,
-        percentage: percentageValue,
+        percentage: percentageInput
+          ? `${percentageInput.slice(0, -2) || "0"},${percentageInput.slice(-2).padEnd(2, "0")}`
+          : "0,00",
         validityDays: Number(editedCashback.validityDays),
       };
 
@@ -155,10 +167,7 @@ export const EditCashbackDialog = ({
 
       if (response.ok) {
         const updated = await response.json();
-
-        // Atualiza a lista de cashbacks na tela sem precisar filtrar de novo
         onSave(updated.cashback);
-
         toast.success("Cashback atualizado com sucesso!");
         onClose();
       } else {
@@ -170,7 +179,6 @@ export const EditCashbackDialog = ({
       console.error(error);
     }
   };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[900px]">
@@ -227,9 +235,11 @@ export const EditCashbackDialog = ({
             </Label>
             <Input
               id="percentage"
-              name="percentage"
-              value={editedCashback.percentage}
-              onChange={handlePercentageChange}
+              value={formatPercentage(percentageInput)}
+              onKeyDown={(e) =>
+                handlePercentageKeyDown(e, percentageInput, setPercentageInput)
+              }
+              readOnly
               inputMode="decimal"
               className="col-span-3"
               required
@@ -248,6 +258,48 @@ export const EditCashbackDialog = ({
               value={editedCashback.validityDays}
               onChange={handleChange}
               className="col-span-3"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="data-compra" className="text-right">
+              Data da compra
+            </Label>
+            <IMaskInput
+              id="data-compra"
+              mask="00/00/0000"
+              value={editedCashback.purchaseData}
+              onAccept={(value) => handleDateChange("purchaseData", value)}
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring bg-background col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="checkin" className="text-right">
+              Data do check-in
+            </Label>
+            <IMaskInput
+              id="checkin"
+              mask="00/00/0000"
+              value={editedCashback.checkin}
+              onAccept={(value) => handleDateChange("checkin", value)}
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring bg-background col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="checkout" className="text-right">
+              Data do check-out
+            </Label>
+            <IMaskInput
+              id="checkout"
+              mask="00/00/0000"
+              value={editedCashback.checkout}
+              onAccept={(value) => handleDateChange("checkout", value)}
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring bg-background col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               required
             />
           </div>

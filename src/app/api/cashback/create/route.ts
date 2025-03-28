@@ -14,7 +14,10 @@ export async function POST(request: Request) {
       !data.startDate ||
       !data.endDate ||
       !data.percentage ||
-      !data.validityDays
+      !data.validityDays ||
+      !data.purchaseData ||
+      !data.checkin ||
+      !data.checkout
     ) {
       return NextResponse.json(
         {
@@ -28,24 +31,21 @@ export async function POST(request: Request) {
     // Conversão e validação das datas
     const startDate = parseBrazilianDate(data.startDate);
     const endDate = parseBrazilianDate(data.endDate);
+    const purchaseData = parseBrazilianDate(data.purchaseData);
+    const checkin = parseBrazilianDate(data.checkin);
+    const checkout = parseBrazilianDate(data.checkout);
 
-    if (isNaN(startDate.getTime())) {
+    if (
+      isNaN(startDate.getTime()) ||
+      isNaN(endDate.getTime()) ||
+      isNaN(purchaseData.getTime()) ||
+      isNaN(checkin.getTime()) ||
+      isNaN(checkout.getTime())
+    ) {
       return NextResponse.json(
         {
           error: "Data inválida.",
-          message:
-            "Data de início inválida ou formato incorreto (use dd/mm/aaaa).",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (isNaN(endDate.getTime())) {
-      return NextResponse.json(
-        {
-          error: "Data inválida.",
-          message:
-            "Data de fim inválida ou formato incorreto (use dd/mm/aaaa).",
+          message: "Data inválida ou formato incorreto (use dd/mm/aaaa).",
         },
         { status: 400 },
       );
@@ -120,6 +120,9 @@ export async function POST(request: Request) {
         endDate: endDate, // Usando o objeto Date convertido
         percentage: percentage,
         validityDays: validityDays,
+        purchaseData: purchaseData,
+        checkin: checkin,
+        checkout: checkout,
       },
     });
 

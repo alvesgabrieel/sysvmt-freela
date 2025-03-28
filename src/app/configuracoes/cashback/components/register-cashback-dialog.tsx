@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader } from "lucide-react";
-import { useState } from "react";
+import { KeyboardEvent, useState } from "react";
 import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
@@ -24,6 +24,9 @@ interface Cashback {
   endDate: string;
   percentage: string;
   validityDays: number;
+  purchaseData: string;
+  checkin: string;
+  checkout: string;
 }
 
 interface RegisterCashbackDialogProps {
@@ -38,30 +41,64 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
   const [endDate, setEndDate] = useState<string>("");
   const [percentage, setPercentage] = useState<string>("");
   const [validityDays, setValidityDays] = useState<string>("");
+  const [purchaseData, setPurchaseData] = useState<string>("");
+  const [checkin, setCheckin] = useState<string>("");
+  const [checkout, setCheckout] = useState<string>("");
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const formatPercentageInput = (value: string) => {
-    const input = value.replace(/\D/g, "");
+  // Função para formatar o valor digitado como porcentagem (0.05%, 1.23%, etc)
+  const formatPercentage = (input: string): string => {
+    if (!input) return "";
 
-    if (input === "") {
-      return ""; // Se o campo estiver vazio, retorna vazio
-    } else if (input.length === 1) {
-      return input; // Caso tenha apenas 1 dígito
-    } else if (input.length === 2) {
-      return input.slice(0, 1) + "," + input.slice(1); // 1 dígito antes do ponto
-    } else {
-      return input.slice(0, 2) + "," + input.slice(2, 5); // 2 dígitos antes do ponto
-    }
+    const numbers = input.replace(/\D/g, "");
+    const padded = numbers.padStart(3, "0"); // Garante pelo menos 3 dígitos (1 + 2 decimais)
+
+    const integerPart = padded.slice(0, -2) || "0";
+    const decimalPart = padded.slice(-2);
+
+    return `${integerPart},${decimalPart}%`;
   };
 
-  const handlePercentageChange = (
-    value: string,
-    setter: React.Dispatch<React.SetStateAction<string>>,
+  // Função para lidar com as teclas pressionadas
+  const handlePercentageKeyDown = (
+    e: KeyboardEvent<HTMLInputElement>,
+    currentValue: string,
+    setValue: React.Dispatch<React.SetStateAction<string>>,
   ) => {
-    setter(formatPercentageInput(value));
+    // Permite apenas números e Backspace
+    if (!/[0-9]|Backspace/.test(e.key)) {
+      e.preventDefault();
+      return;
+    }
+
+    let newValue = currentValue.replace(/\D/g, "");
+
+    if (e.key === "Backspace") {
+      newValue = newValue.slice(0, -1);
+    } else {
+      newValue += e.key;
+    }
+
+    // Limita o tamanho para evitar números muito grandes
+    if (newValue.length > 5) {
+      // Máximo 999,99%
+      return;
+    }
+
+    setValue(newValue);
+  };
+
+  // Converte o valor digitado para o formato que o backend espera (ex: "123" → "1.23")
+  const formatForBackend = (input: string): string => {
+    if (!input) return "0,00"; // Valor padrão quando vazio
+
+    const numbers = input.replace(/\D/g, "");
+    const padded = numbers.padStart(3, "0"); // Garante 2 casas decimais
+
+    return `${padded.slice(0, -2)},${padded.slice(-2)}`;
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -86,8 +123,11 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
         name,
         startDate,
         endDate,
-        percentage: percentage,
+        percentage: formatForBackend(percentage),
         validityDays,
+        purchaseData,
+        checkin,
+        checkout,
       }),
     });
 
@@ -102,6 +142,9 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
       setEndDate("");
       setPercentage("");
       setValidityDays("");
+      setPurchaseData("");
+      setCheckin("");
+      setCheckout("");
     } else {
       const error = await response.json();
       toast.error(error.message);
@@ -165,7 +208,6 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
               onAccept={(value) => setEndDate(value)}
             />
           </div>
-
           <div className="gap-45 grid grid-cols-4 items-center">
             <Label htmlFor="comissao-a-vista" className="w-32 text-right">
               Percentual (%)
@@ -173,16 +215,15 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
             <Input
               id="comissao-a-vista"
               type="text"
-              inputMode="decimal"
               className="col-span-3"
-              value={percentage}
-              onChange={(e) =>
-                handlePercentageChange(e.target.value, setPercentage)
+              value={formatPercentage(percentage)}
+              onKeyDown={(e) =>
+                handlePercentageKeyDown(e, percentage, setPercentage)
               }
+              readOnly
               required
             />
           </div>
-
           <div className="gap-45 grid grid-cols-4 items-center">
             <Label htmlFor="nome" className="w-28 text-right">
               Validade (dias)
@@ -196,7 +237,51 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
               required
             />
           </div>
-
+          <div className="gap-45 grid grid-cols-4 items-center">
+            <Label
+              htmlFor="data-compra"
+              className="whitespace-nowrap text-right"
+            >
+              Data da compra
+            </Label>
+            <IMaskInput
+              id="data-compra"
+              mask="00/00/0000"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={purchaseData}
+              onAccept={(value) => setPurchaseData(value)}
+            />
+          </div>{" "}
+          <div className="gap-45 grid grid-cols-4 items-center">
+            <Label
+              htmlFor="data-checkin"
+              className="whitespace-nowrap text-right"
+            >
+              Data do check-in
+            </Label>
+            <IMaskInput
+              id="data-checkin"
+              mask="00/00/0000"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={checkin}
+              onAccept={(value) => setCheckin(value)}
+            />
+          </div>{" "}
+          <div className="gap-45 grid grid-cols-4 items-center">
+            <Label
+              htmlFor="data-checkout"
+              className="whitespace-nowrap text-right"
+            >
+              Data do check-out
+            </Label>
+            <IMaskInput
+              id="data-checkout"
+              mask="00/00/0000"
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={checkout}
+              onAccept={(value) => setCheckout(value)}
+            />
+          </div>
           <DialogFooter>
             <Button type="submit" variant="outline" disabled={isLoading}>
               {isLoading ? (

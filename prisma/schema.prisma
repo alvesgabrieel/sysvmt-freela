@@ -47,6 +47,9 @@ model Cashback {
   endDate      DateTime
   percentage   Float
   validityDays Int
+  purchaseData DateTime
+  checkin      DateTime
+  checkout     DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

@@ -18,39 +18,23 @@ export async function PUT(request: Request) {
 
     const data = await request.json();
 
-    if (
-      !data.name ||
-      !data.startDate ||
-      !data.endDate ||
-      !data.percentage ||
-      !data.validityDays
-    ) {
-      return NextResponse.json(
-        { error: "Campos obrigatórios faltando." },
-        { status: 400 },
-      );
-    }
-
     const startDate = parseBrazilianDate(data.startDate);
     const endDate = parseBrazilianDate(data.endDate);
+    const purchaseData = parseBrazilianDate(data.purchaseData);
+    const checkin = parseBrazilianDate(data.checkin);
+    const checkout = parseBrazilianDate(data.checkout);
 
-    if (isNaN(startDate.getTime())) {
+    if (
+      isNaN(startDate.getTime()) ||
+      isNaN(endDate.getTime()) ||
+      isNaN(purchaseData.getTime()) ||
+      isNaN(checkin.getTime()) ||
+      isNaN(checkout.getTime())
+    ) {
       return NextResponse.json(
         {
           error: "Data inválida.",
-          message:
-            "Data de início inválida ou formato incorreto (use dd/mm/aaaa).",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (isNaN(endDate.getTime())) {
-      return NextResponse.json(
-        {
-          error: "Data inválida.",
-          message:
-            "Data de fim inválida ou formato incorreto (use dd/mm/aaaa).",
+          message: "Data inválida ou formato incorreto (use dd/mm/aaaa).",
         },
         { status: 400 },
       );
@@ -110,6 +94,9 @@ export async function PUT(request: Request) {
         endDate: endDate,
         percentage: percentage,
         validityDays: validityDays,
+        purchaseData: purchaseData,
+        checkin: checkin,
+        checkout: checkout,
       },
     });
 

@@ -35,6 +35,9 @@ interface Cashback {
   endDate: string;
   percentage: string;
   validityDays: number;
+  purchaseData: string;
+  checkin: string;
+  checkout: string;
 }
 
 const CashbackComponent = () => {
