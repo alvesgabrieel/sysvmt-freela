@@ -9,6 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import Loader from "@/app/components/loader";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -61,10 +62,13 @@ const Cliente = () => {
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5); // Quantos itens por página
+  const [totalPages, setTotalPages] = useState(1);
 
   // Adicione o estado para controlar o diálogo
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+  const [isLoading, setIsLoading] = useState(false);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (client: Client) => {
@@ -86,6 +90,15 @@ const Cliente = () => {
       ),
     );
   };
+
+  const handleAddClient = (newClient: Client) => {
+    setClient((prevClient) => [newClient, ...prevClient]);
+  };
+
+  useEffect(() => {
+    fetchClient(); // Busca tudo (paginação já está ativa por padrão)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]); // Executa apenas no mount
 
   // Busca os estados ao carregar a página
   useEffect(() => {
@@ -126,7 +139,7 @@ const Cliente = () => {
         itemsPerPage: itemsPerPage.toString(),
       }).toString();
 
-      const response = await fetch(`/api/client/filter?${queryParams}`, {
+      const response = await fetch(`/api/client/read?${queryParams}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -134,11 +147,9 @@ const Cliente = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        setClient(result.clients);
-        console.log("Resposta da API:", result);
-      } else {
-        toast.error("Erro ao carregar os clientes");
+        const { clients, totalPages } = await response.json();
+        setClient(clients);
+        setTotalPages(totalPages);
       }
     } catch (err) {
       toast.error("Erro ao carregar os clientes");
@@ -191,35 +202,34 @@ const Cliente = () => {
     }
   };
   // Função para aplicar os filtros
-  const applyFilters = () => {
-    // Remove campos vazios dos filtros, mas mantém todas as chaves
-    const cleanedFilters = {
-      id: "",
-      name: "",
-      login: "",
-      cpf: "",
-      dateOfBirth: "",
-      email: "",
-      primaryPhone: "",
-      secondaryPhone: "",
-      state: "",
-      city: "",
-      tags: [],
-      ...Object.fromEntries(
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        Object.entries(filters).filter(([_, value]) => value !== ""),
-      ),
-    };
+  const applyFilters = async () => {
+    setIsLoading(true);
+    try {
+      const cleanedFilters = {
+        id: "",
+        name: "",
+        login: "",
+        cpf: "",
+        dateOfBirth: "",
+        email: "",
+        primaryPhone: "",
+        secondaryPhone: "",
+        state: "",
+        city: "",
+        tags: [],
+        ...Object.fromEntries(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          Object.entries(filters).filter(([_, value]) => value !== ""),
+        ),
+      };
 
-    setFilters(cleanedFilters); // Atualiza os filtros
-    setCurrentPage(1); // Reseta para a primeira página após filtro
-    fetchClient(); // Busca os tickets com os filtros aplicados
+      setFilters(cleanedFilters); // Atualiza os filtros
+      setCurrentPage(1); // Reseta para a primeira página após filtro
+      await fetchClient(); // Busca os tickets com os filtros aplicados
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  // Lógica de paginação
-  const indexOfLastClient = currentPage * itemsPerPage;
-  const indexOfFirstClient = indexOfLastClient - itemsPerPage;
-  const currentClient = client.slice(indexOfFirstClient, indexOfLastClient);
 
   // Funções de navegação de página
   const handlePageChange = (page: number) => {
@@ -232,11 +242,8 @@ const Cliente = () => {
   };
 
   const handleNextPage = () => {
-    const totalPages = Math.ceil(client.length / itemsPerPage);
     if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
-
-  const totalPages = Math.ceil(client.length / itemsPerPage);
 
   return (
     <div className="flex">
@@ -245,7 +252,7 @@ const Cliente = () => {
         {/* Barra de cima  */}
         <TopBar />
 
-        <RegisterCompanionDialog />
+        <RegisterCompanionDialog onAddClient={handleAddClient} />
 
         {/* Filtros */}
         <Card>
@@ -308,8 +315,16 @@ const Cliente = () => {
               value={filters.primaryPhone || ""}
               onChange={handleFilterChange}
             />
-            <Button onClick={applyFilters} variant="outline">
-              Buscar
+            <Button
+              onClick={applyFilters}
+              variant="outline"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Buscar"
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -332,7 +347,7 @@ const Cliente = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentClient.map((client) => (
+                  {client.map((client) => (
                     <TableRow key={client.id}>
                       <TableCell>{client.name}</TableCell>
                       <TableCell>{client.login}</TableCell>
@@ -361,7 +376,7 @@ const Cliente = () => {
                 </TableBody>
               </Table>
             ) : (
-              <p>Nenhum cliente encontrado com os filtros aplicados.</p>
+              <Loader fullScreen={false} />
             )}
 
             {/* Paginação Personalizada */}

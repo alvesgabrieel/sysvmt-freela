@@ -54,7 +54,8 @@ export async function GET(request: Request) {
           ...(filters.dateOfBirth && { dateOfBirth: filters.dateOfBirth }),
         },
         skip,
-        take: itemsPerPage, // Sem condicional: sempre paginado
+        take: itemsPerPage,
+        orderBy: { id: "desc" },
       }),
       db.companion.count({ where: { ...filters } }), // Contagem total
     ]);

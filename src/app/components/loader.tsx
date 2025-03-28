@@ -1,9 +1,34 @@
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react";
 
-const Loader = () => {
-    return ( <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div> );
+import { cn } from "@/lib/utils"; // Importe sua utility de classes (opcional)
+
+interface LoaderProps {
+  fullScreen?: boolean;
+  className?: string;
+  iconSize?: number;
 }
- 
+
+const Loader = ({
+  fullScreen = true,
+  className = "",
+  iconSize = 10,
+}: LoaderProps) => {
+  return (
+    <div
+      className={cn(
+        "flex w-full items-center justify-center",
+        fullScreen ? "h-screen" : "h-auto",
+        className,
+      )}
+    >
+      <Loader2
+        className={cn(
+          `text-primary animate-spin`,
+          `h-${iconSize} w-${iconSize}`,
+        )}
+      />
+    </div>
+  );
+};
+
 export default Loader;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { parseBrazilianNumber } from "@/app/functions/backend/parse-brazilian-number";
 import { db } from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -26,8 +27,10 @@ export async function POST(request: Request) {
     }
 
     // Converter os valores para float
-    const upfrontComission = parseFloat(data.upfrontComission);
-    const installmentComission = parseFloat(data.installmentComission);
+    const upfrontComission = parseBrazilianNumber(data.upfrontComission);
+    const installmentComission = parseBrazilianNumber(
+      data.installmentComission,
+    );
 
     if (isNaN(upfrontComission) || isNaN(installmentComission)) {
       return NextResponse.json(
@@ -72,21 +75,17 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        message: "Operador turístico criado com sucesso.",
+        message: "Operadora criada com sucesso.",
         tourOperator,
       },
       { status: 201 },
     );
   } catch (error) {
-    console.error(
-      "Erro ao salvar o operador turístico no banco de dados:",
-      error,
-    );
+    console.error("Erro ao salvar Operadora no banco de dados:", error);
     return NextResponse.json(
       {
         error: "Erro no servidor.",
-        message:
-          "Não foi possível criar o operador turístico. Tente novamente.",
+        message: "Não foi possível criar Operadora. Tente novamente.",
       },
       { status: 500 },
     );

@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -16,7 +17,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchCitiesByState, fetchStates } from "@/services/ibge";
 
-const RegisterHostingDialog = () => {
+type Hosting = {
+  id: number;
+  name: string;
+  state: string;
+  city: string;
+  observation?: string;
+};
+
+interface RegisterHostingDialogProps {
+  onAddHosting: (newHosting: Hosting) => void;
+}
+
+const RegisterHostingDialog: React.FC<RegisterHostingDialogProps> = ({
+  onAddHosting,
+}) => {
   const [name, setName] = useState<string>("");
   const [state, setState] = useState<string>("");
   const [city, setCity] = useState<string>("");
@@ -25,6 +40,8 @@ const RegisterHostingDialog = () => {
 
   const [states, setStates] = useState<{ id: number; nome: string }[]>([]);
   const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
+
+  const [isLoading, setIsLoading] = useState(false);
 
   // Buscar estados
   useEffect(() => {
@@ -61,6 +78,7 @@ const RegisterHostingDialog = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
 
     const response = await fetch("/api/hosting/create", {
       method: "POST",
@@ -72,8 +90,10 @@ const RegisterHostingDialog = () => {
 
     if (response.ok) {
       const result = await response.json();
+      onAddHosting(result.hosting);
       toast.success(result.message);
       setIsOpen(false);
+      setIsLoading(false);
       setName("");
       setState("");
       setCity("");
@@ -164,8 +184,12 @@ const RegisterHostingDialog = () => {
             />
           </div>
           <DialogFooter>
-            <Button type="submit" variant="outline">
-              Cadastrar hospedagem
+            <Button type="submit" variant="outline" disabled={isLoading}>
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Cadastrar hospedagem"
+              )}
             </Button>
           </DialogFooter>
         </form>

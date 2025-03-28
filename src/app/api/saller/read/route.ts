@@ -65,7 +65,8 @@ export async function GET(request: Request) {
           ...(filters.phone && { phone: filters.phone }),
         },
         skip,
-        take: itemsPerPage, // Sem condicional: sempre paginado
+        take: itemsPerPage,
+        orderBy: { id: "desc" },
       }),
       db.saller.count({ where: { ...filters } }), // Contagem total
     ]);

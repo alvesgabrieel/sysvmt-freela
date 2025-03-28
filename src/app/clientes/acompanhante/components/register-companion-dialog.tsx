@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useState } from "react";
 import { IMaskInput } from "react-imask"; // Adicione este import
 import { toast } from "sonner";
@@ -16,7 +17,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const RegisterCompanionDialog = () => {
+interface Companion {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  dateOfBirth: string;
+}
+
+interface RegisterCompanionDialogProps {
+  onAddCompanion: (newCompanion: Companion) => void;
+}
+
+const RegisterCompanionDialog: React.FC<RegisterCompanionDialogProps> = ({
+  onAddCompanion,
+}) => {
   const [name, setName] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [email, setEmail] = useState<string>("");
@@ -24,8 +39,11 @@ const RegisterCompanionDialog = () => {
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
 
     const response = await fetch("/api/companion/create", {
       method: "POST",
@@ -41,9 +59,17 @@ const RegisterCompanionDialog = () => {
     });
 
     if (response.ok) {
-      const result = await response.json();
-      toast.success(result.message);
+      const responseData = await response.json();
+
+      if (!responseData.companion || !responseData.companion.id) {
+        toast.error("Erro: A resposta do servidor não contém um ID válido.");
+        return;
+      }
+
+      onAddCompanion(responseData.companion);
+      toast.success(responseData.message);
       setIsOpen(false);
+      setIsLoading(false);
       setName("");
       setPhone("");
       setEmail("");
@@ -124,8 +150,12 @@ const RegisterCompanionDialog = () => {
             />
           </div>
           <DialogFooter>
-            <Button type="submit" variant="outline">
-              Cadastrar acompanhante
+            <Button type="submit" variant="outline" disabled={isLoading}>
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Cadastrar acompanhante"
+              )}
             </Button>
           </DialogFooter>
         </form>

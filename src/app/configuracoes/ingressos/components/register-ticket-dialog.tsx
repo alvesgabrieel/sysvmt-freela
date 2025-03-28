@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -16,18 +17,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchCitiesByState, fetchStates } from "@/services/ibge"; // Importando o serviço
 
+type Ticket = {
+  id: number;
+  name: string;
+  state: string;
+  city: string;
+  observation?: string; // O campo observation é opcional
+};
+
 interface RegisterTicketDialogProps {
-  onTicketCreated: (ticket: {
-    id: number;
-    name: string;
-    state: string;
-    city: string;
-    observation: string;
-  }) => void;
+  onAddTicket: (newTicket: Ticket) => void;
 }
 
 const RegisterTicketDialog: React.FC<RegisterTicketDialogProps> = ({
-  onTicketCreated,
+  onAddTicket,
 }) => {
   const [name, setName] = useState("");
   const [state, setState] = useState("");
@@ -38,6 +41,7 @@ const RegisterTicketDialog: React.FC<RegisterTicketDialogProps> = ({
   const [states, setStates] = useState<{ id: number; nome: string }[]>([]);
   const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
 
+  const [isLoading, setIsLoading] = useState(false);
   // Buscar estados
   useEffect(() => {
     const loadStates = async () => {
@@ -73,6 +77,7 @@ const RegisterTicketDialog: React.FC<RegisterTicketDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
 
     const response = await fetch("/api/ticket/create", {
       method: "POST",
@@ -85,8 +90,9 @@ const RegisterTicketDialog: React.FC<RegisterTicketDialogProps> = ({
     if (response.ok) {
       const result = await response.json();
       toast.success(result.message);
-      onTicketCreated(result.ticket);
+      onAddTicket(result.ticket);
       setIsOpen(false);
+      setIsLoading(false);
       setName("");
       setState("");
       setCity("");
@@ -184,8 +190,12 @@ const RegisterTicketDialog: React.FC<RegisterTicketDialogProps> = ({
           </div>
 
           <DialogFooter>
-            <Button type="submit" variant="outline">
-              Cadastrar ingresso
+            <Button type="submit" variant="outline" disabled={isLoading}>
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Cadastrar ingresso"
+              )}
             </Button>
           </DialogFooter>
         </form>

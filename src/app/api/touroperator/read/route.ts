@@ -62,7 +62,8 @@ export async function GET(request: Request) {
           }),
         },
         skip,
-        take: itemsPerPage, // Sem condicional: sempre paginado
+        take: itemsPerPage,
+        orderBy: { id: "desc" },
       }),
       db.tourOperator.count({ where: { ...filters } }), // Contagem total
     ]);

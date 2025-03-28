@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useEffect, useState } from "react";
 import { IMaskInput } from "react-imask"; // Importe o IMaskInput
 import Select from "react-select";
@@ -24,7 +25,27 @@ interface Tag {
   color: string;
 }
 
-const RegisterClientDialog = () => {
+interface Client {
+  id: number;
+  name: string;
+  login: string;
+  cpf: string;
+  dateOfBirth: string;
+  email: string;
+  primaryPhone: string;
+  secondaryPhone: string;
+  state: string;
+  city: string;
+  tags: [];
+}
+
+interface RegisterClientDialogProps {
+  onAddClient: (newClient: Client) => void;
+}
+
+const RegisterClientDialog: React.FC<RegisterClientDialogProps> = ({
+  onAddClient,
+}) => {
   const [name, setName] = useState<string>("");
   const [login, setLogin] = useState<string>("");
   const [cpf, setCpf] = useState<string>("");
@@ -41,6 +62,8 @@ const RegisterClientDialog = () => {
 
   const [states, setStates] = useState<{ id: number; nome: string }[]>([]);
   const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
+
+  const [isLoading, setIsLoading] = useState(false);
 
   // Buscar estados
   useEffect(() => {
@@ -95,6 +118,7 @@ const RegisterClientDialog = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
 
     const response = await fetch("/api/client/create", {
       method: "POST",
@@ -117,7 +141,9 @@ const RegisterClientDialog = () => {
 
     if (response.ok) {
       const result = await response.json();
+      onAddClient(result.client);
       toast.success(result.message);
+      setIsLoading(false);
       setIsOpen(false);
       setName("");
       setLogin("");
@@ -368,8 +394,12 @@ const RegisterClientDialog = () => {
             </select>
           </div>
           <DialogFooter>
-            <Button type="submit" variant="outline">
-              Cadastrar cliente
+            <Button type="submit" variant="outline" disabled={isLoading}>
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Cadastrar cliente"
+              )}
             </Button>
           </DialogFooter>
         </form>

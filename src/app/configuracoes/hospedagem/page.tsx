@@ -33,7 +33,7 @@ type Hosting = {
   name: string;
   state: string;
   city: string;
-  observation?: string; // O campo observation é opcional
+  observation?: string;
 };
 
 const Hospedagem = () => {
@@ -62,6 +62,8 @@ const Hospedagem = () => {
 
   const [totalPages, setTotalPages] = useState(1);
 
+  const [isLoading, setIsLoading] = useState(false);
+
   // Função para abrir o diálogo de edição
   const handleViewMore = (hosting: Hosting) => {
     setSelectedHosting(hosting); // Define o ingresso selecionado
@@ -83,9 +85,14 @@ const Hospedagem = () => {
     );
   };
 
+  const handleAddHosting = (newHosting: Hosting) => {
+    setHosting((prevHosting) => [newHosting, ...prevHosting]);
+  };
+
   useEffect(() => {
     fetchHosting(); // Busca tudo (paginação já está ativa por padrão)
-  }, []); // Executa apenas no mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]); // Executa apenas no mount
 
   // Busca os estados ao carregar a página
   useEffect(() => {
@@ -133,7 +140,7 @@ const Hospedagem = () => {
       if (response.ok) {
         const { hostings, totalPages } = await response.json();
         setHosting(hostings);
-        setTotalPages(totalPages); // Armazena o total de páginas
+        setTotalPages(totalPages);
       } else {
         toast.error("Erro ao carregar hospedagens");
       }
@@ -188,23 +195,27 @@ const Hospedagem = () => {
   };
 
   // Função para aplicar os filtros
-  const applyFilters = () => {
-    // Remove campos vazios dos filtros, mas mantém todas as chaves
-    const cleanedFilters = {
-      id: "",
-      name: "",
-      state: "",
-      city: "",
-      observation: "",
-      ...Object.fromEntries(
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        Object.entries(filters).filter(([_, value]) => value !== ""),
-      ),
-    };
+  const applyFilters = async () => {
+    setIsLoading(true);
+    try {
+      const cleanedFilters = {
+        id: "",
+        name: "",
+        state: "",
+        city: "",
+        observation: "",
+        ...Object.fromEntries(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          Object.entries(filters).filter(([_, value]) => value !== ""),
+        ),
+      };
 
-    setFilters(cleanedFilters); // Atualiza os filtros
-    setCurrentPage(1); // Reseta para a primeira página após filtro
-    fetchHosting(); // Busca os tickets com os filtros aplicados
+      setFilters(cleanedFilters); // Atualiza os filtros
+      setCurrentPage(1); // Reseta para a primeira página após filtro
+      await fetchHosting(); // Busca os tickets com os filtros aplicados
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Funções de navegação de página
@@ -214,7 +225,9 @@ const Hospedagem = () => {
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 1) handlePageChange(currentPage - 1);
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1); // Atualiza o estado primeiro
+    }
   };
 
   const handleNextPage = () => {
@@ -228,7 +241,7 @@ const Hospedagem = () => {
         {/* Barra de cima  */}
         <TopBar />
 
-        <RegisterHostingDialog />
+        <RegisterHostingDialog onAddHosting={handleAddHosting} />
         {/* Filtros */}
         <Card>
           <CardHeader>
@@ -283,8 +296,16 @@ const Hospedagem = () => {
               value={filters.observation || ""}
               onChange={handleFilterChange}
             />
-            <Button onClick={applyFilters} variant="outline">
-              Buscar
+            <Button
+              onClick={applyFilters}
+              variant="outline"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Buscar"
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -334,7 +355,7 @@ const Hospedagem = () => {
                 </TableBody>
               </Table>
             ) : (
-              <Loader />
+              <Loader fullScreen={false} />
             )}
 
             {/* Paginação Personalizada */}

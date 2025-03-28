@@ -1,4 +1,4 @@
-import { Minus, Plus } from "lucide-react";
+import { Loader, Minus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { IMaskInput } from "react-imask"; // Importe o IMaskInput
 import { toast } from "sonner";
@@ -17,7 +17,31 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { fetchCitiesByState, fetchStates } from "@/services/ibge";
 
-export default function RegisterSallerDialog() {
+interface Saller {
+  id: number;
+  name: string;
+  login: string;
+  email: string;
+  phone: string;
+  cpf: string;
+  rg: string;
+  observation?: string;
+  pix: string;
+  photo?: string;
+  state: string;
+  city: string;
+  adress: string;
+  number: string;
+  complement?: string;
+}
+
+interface RegisterSallerDialogProps {
+  onAddSaller: (newSaller: Saller) => void;
+}
+
+const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
+  onAddSaller,
+}) => {
   const [activeTab, setActiveTab] = useState("dados-basicos");
   const [comissoes, setComissoes] = useState([
     { operadora: "", aVista: "", parcelado: "" },
@@ -43,6 +67,10 @@ export default function RegisterSallerDialog() {
   const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
+
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+
+  const [isLoading, setIsLoading] = useState(false);
 
   // Buscar estados ao carregar o componente
   useEffect(() => {
@@ -91,6 +119,7 @@ export default function RegisterSallerDialog() {
   };
 
   const handleSubmit = async () => {
+    setIsLoading(true);
     // Validação da foto
 
     if (file && !file.type.startsWith("image/")) {
@@ -125,11 +154,13 @@ export default function RegisterSallerDialog() {
         body: dataToSend,
       });
 
-      const result = await response.json();
-
       if (response.ok) {
+        const result = await response.json();
         toast.success("Vendedor cadastrado com sucesso!");
         // Resetar todos os estados
+        onAddSaller(result.saller);
+        setIsOpen(false);
+        setIsLoading(false);
         setFormData({
           name: "",
           login: "",
@@ -148,7 +179,8 @@ export default function RegisterSallerDialog() {
         setFile(null);
         setComissoes([{ operadora: "", aVista: "", parcelado: "" }]);
       } else {
-        toast.error(result.message || "Erro ao cadastrar vendedor");
+        const error = await response.json();
+        toast.error(error.message);
       }
     } catch (error) {
       console.error("Erro ao enviar dados:", error);
@@ -157,9 +189,11 @@ export default function RegisterSallerDialog() {
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Cadastrar vendedor</Button>
+        <Button variant="outline" onClick={() => setIsOpen(true)}>
+          Cadastrar vendedor
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
         <DialogHeader>
@@ -459,11 +493,22 @@ export default function RegisterSallerDialog() {
         </ScrollArea>
 
         <DialogFooter>
-          <Button type="button" onClick={handleSubmit} variant="outline">
-            Cadastrar vendedor
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isLoading}
+            onClick={handleSubmit}
+          >
+            {isLoading ? (
+              <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+            ) : (
+              "Cadastrar vendedor"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default RegisterSallerDialog;

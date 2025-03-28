@@ -40,7 +40,6 @@ export async function GET(request: Request) {
       filters.primaryPhone = searchParams.get("primaryPhone")!;
     }
 
-    // 2. Paginação SEMPRE ativa (valores padrão: page=1, itemsPerPage=5)
     const page = parseInt(searchParams.get("page") || "1", 10);
     const itemsPerPage = parseInt(searchParams.get("itemsPerPage") || "5", 10); // Removida a opção "0"
     const skip = (page - 1) * itemsPerPage;
@@ -62,6 +61,7 @@ export async function GET(request: Request) {
         },
         skip,
         take: itemsPerPage, // Sem condicional: sempre paginado
+        orderBy: { id: "desc" },
       }),
       db.client.count({ where: { ...filters } }), // Contagem total
     ]);

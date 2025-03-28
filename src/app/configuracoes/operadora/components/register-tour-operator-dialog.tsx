@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useState } from "react";
 import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
@@ -16,7 +17,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const RegisterTourOperatorDialog = () => {
+interface TourOperator {
+  id: number;
+  name: string;
+  phone: string;
+  contact: string;
+  email: string;
+  site: string;
+  login: string;
+  password: string;
+  upfrontComission: number;
+  installmentComission: number;
+  observation?: string | null;
+}
+
+interface RegisterTourOperatorProps {
+  onAddTourOperator: (newTourOperator: TourOperator) => void;
+}
+
+const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
+  onAddTourOperator,
+}) => {
   const [name, setName] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [contact, setContact] = useState<string>("");
@@ -24,31 +45,13 @@ const RegisterTourOperatorDialog = () => {
   const [site, setSite] = useState<string>("");
   const [login, setLogin] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-
   const [upfrontComission, setUpfrontComission] = useState<string>("");
   const [installmentComission, setInstallmentComission] = useState<string>("");
-
   const [observation, setObservation] = useState<string>("");
+
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
-  // const [value, setValue] = useState("");
-
-  // const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const input = e.target.value.replace(/\D/g, ""); // Remove tudo que não for número
-
-  //   if (input === "") {
-  //     setValue(""); // Se o campo estiver vazio, limpa o valor
-  //   } else if (input.length === 1) {
-  //     // Caso tenha apenas 1 dígito, apenas exibe o número
-  //     setValue(input);
-  //   } else if (input.length === 2) {
-  //     // Se tiver 2 dígitos, coloca o ponto depois do primeiro
-  //     setValue(input.slice(0, 1) + "." + input.slice(1));
-  //   } else if (input.length > 2) {
-  //     // Se tiver 3 ou mais dígitos, coloca o ponto depois do segundo dígito
-  //     setValue(input.slice(0, 2) + "." + input.slice(2, 5)); // Limita a 3 casas decimais
-  //   }
-  // };
+  const [isLoading, setIsLoading] = useState(false);
 
   const formatCommissionInput = (value: string) => {
     const input = value.replace(/\D/g, ""); // Remove tudo que não for número
@@ -58,9 +61,9 @@ const RegisterTourOperatorDialog = () => {
     } else if (input.length === 1) {
       return input; // Caso tenha apenas 1 dígito
     } else if (input.length === 2) {
-      return input.slice(0, 1) + "." + input.slice(1); // 1 dígito antes do ponto
+      return input.slice(0, 1) + "," + input.slice(1); // 1 dígito antes do ponto
     } else {
-      return input.slice(0, 2) + "." + input.slice(2, 5); // 2 dígitos antes do ponto
+      return input.slice(0, 2) + "," + input.slice(2, 5); // 2 dígitos antes do ponto
     }
   };
 
@@ -71,25 +74,9 @@ const RegisterTourOperatorDialog = () => {
     setter(formatCommissionInput(value));
   };
 
-  // const handleFloatInput = (
-  //   e: React.ChangeEvent<HTMLInputElement>,
-  //   setter: React.Dispatch<React.SetStateAction<string>>,
-  // ) => {
-  //   const value = e.target.value;
-
-  //   // Permite:
-  //   // - Números (0-9)
-  //   // - Máximo um ponto decimal
-  //   // - Valores vazios
-  //   if (/^(\d+)?([.]?\d{0,2})?$/.test(value) || value === "") {
-  //     setter(value);
-  //   }
-  // };
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    // const formatForSubmit = (value: string) =>
-    //   value ? parseFloat(value.replace(",", ".")) : 0;
+    setIsLoading(true);
 
     const response = await fetch("/api/touroperator/create", {
       method: "POST",
@@ -104,18 +91,18 @@ const RegisterTourOperatorDialog = () => {
         site,
         login,
         password,
-        upfrontComission: upfrontComission ? parseFloat(upfrontComission) : 0,
-        installmentComission: installmentComission
-          ? parseFloat(installmentComission)
-          : 0,
+        upfrontComission,
+        installmentComission,
         observation,
       }),
     });
-
     if (response.ok) {
       const result = await response.json();
+
+      onAddTourOperator(result.tourOperator);
       toast.success(result.message);
       setIsOpen(false);
+      setIsLoading(false);
       setName("");
       setPhone("");
       setContact("");
@@ -129,6 +116,7 @@ const RegisterTourOperatorDialog = () => {
     } else {
       const error = await response.json();
       toast.error(error.message);
+      setIsLoading(false);
     }
   };
 
@@ -282,8 +270,12 @@ const RegisterTourOperatorDialog = () => {
             />
           </div>
           <DialogFooter>
-            <Button type="submit" variant="outline">
-              Cadastrar operadora
+            <Button type="submit" variant="outline" disabled={isLoading}>
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Cadastrar Operadora"
+              )}
             </Button>
           </DialogFooter>
         </form>

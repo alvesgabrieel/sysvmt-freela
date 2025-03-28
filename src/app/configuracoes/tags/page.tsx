@@ -4,6 +4,7 @@ import { EyeIcon, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import Loader from "@/app/components/loader";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -110,44 +111,49 @@ const Tags = () => {
         <RegisterTagDialog onTagCreated={handleTagCreated} />
 
         {/* Tabela de Tags */}
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Cor</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tags.map((tag) => (
-              <TableRow key={tag.id}>
-                <TableCell>{tag.name}</TableCell>
-                <TableCell>
-                  <div
-                    className="h-6 w-6 rounded-full border border-gray-300"
-                    style={{ backgroundColor: tag.color }}
-                  ></div>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleViewMore(tag)}
-                  >
-                    <EyeIcon className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => handleDeleteTag(tag.id)}
-                    className="ml-3"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </Button>
-                </TableCell>
+        {tags.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Cor</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {tags.map((tag) => (
+                <TableRow key={tag.id}>
+                  <TableCell>{tag.name}</TableCell>
+                  <TableCell>
+                    <div
+                      className="h-6 w-6 rounded-full border border-gray-300"
+                      style={{ backgroundColor: tag.color }}
+                    ></div>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleViewMore(tag)}
+                    >
+                      <EyeIcon className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => handleDeleteTag(tag.id)}
+                      className="ml-3"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <Loader fullScreen={false} />
+        )}
+
         {selectedTag && (
           <EditTagDialog
             tag={selectedTag}

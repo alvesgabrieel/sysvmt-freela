@@ -9,6 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import Loader from "@/app/components/loader";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -40,8 +41,8 @@ const Ingressos = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [filters, setFilters] = useState({
     name: "",
-    state: "", // Armazena o ID do estado
-    city: "", // Armazena o nome da cidade
+    state: "",
+    city: "",
     observation: "",
   });
 
@@ -54,10 +55,13 @@ const Ingressos = () => {
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5); // Quantos itens por página
+  const [totalPages, setTotalPages] = useState(1);
 
   // Adicione o estado para controlar o diálogo
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
+  const [isLoading, setIsLoading] = useState(false);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (ticket: Ticket) => {
@@ -79,6 +83,15 @@ const Ingressos = () => {
       ),
     );
   };
+
+  const handleAddTicket = (newTicket: Ticket) => {
+    setTickets((prevTicket) => [newTicket, ...prevTicket]);
+  };
+
+  useEffect(() => {
+    fetchTickets(); // Busca tudo (paginação já está ativa por padrão)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]); // Executa apenas no mount
 
   // Busca os estados ao carregar a página
   useEffect(() => {
@@ -110,10 +123,6 @@ const Ingressos = () => {
     }
   };
 
-  const handleTicketCreated = (newTicket: Ticket) => {
-    setTickets((prevTickets) => [...prevTickets, newTicket]);
-  };
-
   // Função para buscar tickets com base nos filtros
   const fetchTickets = async () => {
     try {
@@ -123,14 +132,7 @@ const Ingressos = () => {
         itemsPerPage: itemsPerPage.toString(),
       }).toString();
 
-      // Log dos filtros sendo enviados
-      console.log("Filtros sendo enviados:", {
-        ...filters,
-        page: currentPage.toString(),
-        itemsPerPage: itemsPerPage.toString(),
-      });
-
-      const response = await fetch(`/api/ticket/filter?${queryParams}`, {
+      const response = await fetch(`/api/ticket/read?${queryParams}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -138,10 +140,9 @@ const Ingressos = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        setTickets(result.tickets);
-      } else {
-        toast.error("Erro ao carregar os tickets");
+        const { tickets, totalPages } = await response.json();
+        setTickets(tickets);
+        setTotalPages(totalPages);
       }
     } catch (err) {
       toast.error("Erro ao carregar os tickets");
@@ -194,45 +195,44 @@ const Ingressos = () => {
   };
 
   // Função para aplicar os filtros
-  const applyFilters = () => {
-    // Remove campos vazios dos filtros, mas mantém todas as chaves
-    const cleanedFilters = {
-      name: "",
-      state: "",
-      city: "",
-      observation: "",
-      ...Object.fromEntries(
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        Object.entries(filters).filter(([_, value]) => value !== ""),
-      ),
-    };
+  const applyFilters = async () => {
+    setIsLoading(true);
+    try {
+      const cleanedFilters = {
+        name: "",
+        state: "",
+        city: "",
+        observation: "",
+        ...Object.fromEntries(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          Object.entries(filters).filter(([_, value]) => value !== ""),
+        ),
+      };
 
-    setFilters(cleanedFilters); // Atualiza os filtros
-    setCurrentPage(1); // Reseta para a primeira página após filtro
-    fetchTickets(); // Busca os tickets com os filtros aplicados
+      setFilters(cleanedFilters); // Atualiza os filtros
+      setCurrentPage(1); // Reseta para a primeira página após filtro
+      await fetchTickets(); // Busca os tickets com os filtros aplicados
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Lógica de paginação
-  const indexOfLastTicket = currentPage * itemsPerPage;
-  const indexOfFirstTicket = indexOfLastTicket - itemsPerPage;
-  const currentTickets = tickets.slice(indexOfFirstTicket, indexOfLastTicket);
-
   // Funções de navegação de página
+  // 2. Funções de paginação - IMPORTANTE: atualize o estado PRIMEIRO
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    fetchTickets(); // Busca os tickets para a nova página
+    setCurrentPage(page); // Atualiza a página primeiro
+    fetchTickets();
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 1) handlePageChange(currentPage - 1);
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1); // Atualiza o estado primeiro
+    }
   };
 
   const handleNextPage = () => {
-    const totalPages = Math.ceil(tickets.length / itemsPerPage);
     if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
-
-  const totalPages = Math.ceil(tickets.length / itemsPerPage);
 
   return (
     <div className="flex">
@@ -241,7 +241,7 @@ const Ingressos = () => {
         {/* Barra de cima */}
         <TopBar />
 
-        <RegisterTicketDialog onTicketCreated={handleTicketCreated} />
+        <RegisterTicketDialog onAddTicket={handleAddTicket} />
 
         {/* Filtros */}
         <Card>
@@ -290,8 +290,16 @@ const Ingressos = () => {
               value={filters.observation || ""}
               onChange={handleFilterChange}
             />
-            <Button onClick={applyFilters} variant="outline">
-              Buscar
+            <Button
+              onClick={applyFilters}
+              variant="outline"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Buscar"
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -313,7 +321,7 @@ const Ingressos = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentTickets.map((ticket) => (
+                  {tickets.map((ticket) => (
                     <TableRow key={ticket.id}>
                       <TableCell>{ticket.name}</TableCell>
                       <TableCell>{ticket.state}</TableCell>
@@ -341,7 +349,7 @@ const Ingressos = () => {
                 </TableBody>
               </Table>
             ) : (
-              <p>Nenhum ingresso encontrado com os filtros aplicados.</p>
+              <Loader fullScreen={false} />
             )}
 
             {/* Paginação Personalizada */}

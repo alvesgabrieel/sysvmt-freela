@@ -1,9 +1,15 @@
 "use client";
 
-import { EyeIcon, TrashIcon } from "lucide-react";
-import { useState } from "react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  EyeIcon,
+  TrashIcon,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import Loader from "@/app/components/loader";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { formatBackendDateToFrontend } from "@/app/functions/frontend/format-backend-date-to-frontend";
@@ -42,12 +48,20 @@ const CashbackComponent = () => {
   });
 
   const [cashbacks, setCashbacks] = useState<Cashback[]>([]);
+  // const [isLoading, setIsLoading] = useState(true); // Adicionei estado de loading
+
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5); // Quantos itens por página
+  const [totalPages, setTotalPages] = useState(1);
 
   // Adicione o estado para controlar o diálogo
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedCashback, setSelectedCashback] = useState<Cashback | null>(
     null,
   );
+
+  const [isLoading, setIsLoading] = useState(false);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (cashback: Cashback) => {
@@ -82,10 +96,53 @@ const CashbackComponent = () => {
     setIsEditDialogOpen(false); // Fecha o diálogo
   };
 
+  const handleAddCashback = (newCashback: Cashback) => {
+    setCashbacks((prevCashbacks) => [newCashback, ...prevCashbacks]);
+  };
+
+  useEffect(() => {
+    filterCashbacks(); // Busca tudo (paginação já está ativa por padrão)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]); // Executa apenas no mount
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        // setIsLoading(true);
+        const response = await fetch("/api/cashback/filter", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          setCashbacks(result.cashbacks || []);
+        } else {
+          toast.error("Erro ao carregar os cashbacks");
+        }
+      } catch (err) {
+        toast.error("Erro ao carregar os cashbacks");
+        console.error("Erro ao carregar os cashbacks", err);
+      }
+      // } finally {
+      //   setIsLoading(false);
+      // }
+    };
+
+    loadInitialData();
+  }, []); // Array vazio para executar apenas na montagem do componente
+
   const filterCashbacks = async () => {
+    // Só aplica filtros se pelo menos um campo estiver preenchido
+    // const hasFilters = Object.values(filters).some((value) => value !== "");
+
     try {
       const queryParams = new URLSearchParams({
         ...filters,
+        page: currentPage.toString(),
+        itemsPerPage: itemsPerPage.toString(),
       }).toString();
 
       const response = await fetch(`/api/cashback/filter?${queryParams}`, {
@@ -97,8 +154,9 @@ const CashbackComponent = () => {
 
       if (response.ok) {
         const result = await response.json();
-        console.log("Dados retornados da API:", result);
-        setCashbacks(result.cashbacks || []); // Garante que sallers seja um array
+        console.log(result);
+        setCashbacks(result.cashbacks || []);
+        setTotalPages(result.pagination.totalPages);
       } else {
         toast.error("Erro ao carregar os cashbacks");
       }
@@ -107,7 +165,6 @@ const CashbackComponent = () => {
       console.error("Erro ao carregar os cashbacks", err);
     }
   };
-
   const handleDeleteCashbacks = async (cashbackId: number) => {
     try {
       const response = await fetch(`/api/cashback/delete?id=${cashbackId}`, {
@@ -132,8 +189,44 @@ const CashbackComponent = () => {
     }
   };
 
-  const applyFilters = () => {
-    filterCashbacks(); // Busca os vendedores com os filtros aplicados
+  const applyFilters = async () => {
+    setIsLoading(true);
+    try {
+      const cleanedFilters = {
+        Id: "",
+        name: "",
+        startDate: "",
+        endDate: "",
+        percentage: "",
+        validityDays: "",
+        ...Object.fromEntries(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          Object.entries(filters).filter(([_, value]) => value !== ""),
+        ),
+      };
+      setFilters(cleanedFilters); // Atualiza os filtros
+      setCurrentPage(1); // Reseta para a primeira página após filtro
+      await filterCashbacks(); // Busca os tickets com os filtros aplicados
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Funções de navegação de página
+  // 2. Funções de paginação - IMPORTANTE: atualize o estado PRIMEIRO
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page); // Atualiza a página primeiro
+    filterCashbacks();
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1); // Atualiza o estado primeiro
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
 
   return (
@@ -143,7 +236,7 @@ const CashbackComponent = () => {
         {/* Barra de cima  */}
         <TopBar />
 
-        <RegisterCashbackDialog />
+        <RegisterCashbackDialog onAddCashback={handleAddCashback} />
         {/* Filtros */}
         <Card>
           <CardHeader>
@@ -194,8 +287,16 @@ const CashbackComponent = () => {
                 setFilters({ ...filters, validityDays: e.target.value })
               }
             />
-            <Button onClick={applyFilters} variant="outline">
-              Buscar
+            <Button
+              onClick={applyFilters}
+              variant="outline"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Buscar"
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -258,7 +359,30 @@ const CashbackComponent = () => {
                 </TableBody>
               </Table>
             ) : (
-              <p>Nenhum cashback encontrado com os filtros aplicados.</p>
+              <Loader fullScreen={false} />
+            )}
+
+            {/* Paginação Personalizada */}
+            {cashbacks.length > 0 && (
+              <div className="mt-4 flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeftIcon className="h-5 w-5" />
+                </Button>
+                <span>
+                  Página {currentPage} de {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRightIcon className="h-5 w-5" />
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>

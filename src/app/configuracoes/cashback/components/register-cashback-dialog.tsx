@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useState } from "react";
 import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
@@ -16,7 +17,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const RegisterCashbackDialog = () => {
+interface Cashback {
+  id: number;
+  name: string;
+  startDate: string;
+  endDate: string;
+  percentage: string;
+  validityDays: number;
+}
+
+interface RegisterCashbackDialogProps {
+  onAddCashback: (newCashback: Cashback) => void;
+}
+
+const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
+  onAddCashback,
+}) => {
   const [name, setName] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
@@ -24,6 +40,8 @@ const RegisterCashbackDialog = () => {
   const [validityDays, setValidityDays] = useState<string>("");
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
+
+  const [isLoading, setIsLoading] = useState(false);
 
   const formatPercentageInput = (value: string) => {
     const input = value.replace(/\D/g, "");
@@ -48,6 +66,7 @@ const RegisterCashbackDialog = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
 
     // Validação adicional
     if (
@@ -75,7 +94,9 @@ const RegisterCashbackDialog = () => {
     if (response.ok) {
       const result = await response.json();
       toast.success(result.message);
+      onAddCashback(result.cashback);
       setIsOpen(false);
+      setIsLoading(false);
       setName("");
       setStartDate("");
       setEndDate("");
@@ -171,8 +192,12 @@ const RegisterCashbackDialog = () => {
           </div>
 
           <DialogFooter>
-            <Button type="submit" variant="outline">
-              Cadastrar cashback
+            <Button type="submit" variant="outline" disabled={isLoading}>
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Cadastrar cashback"
+              )}
             </Button>
           </DialogFooter>
         </form>

@@ -15,7 +15,6 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const searchParams = url.searchParams;
 
-    // 1. Extrai filtros (mantido igual)
     const filters: Filters = {};
     if (searchParams.has("id") && searchParams.get("id") !== "") {
       filters.id = parseInt(searchParams.get("id")!, 10);
@@ -36,12 +35,10 @@ export async function GET(request: Request) {
       filters.observation = searchParams.get("observation")!;
     }
 
-    // 2. Paginação SEMPRE ativa (valores padrão: page=1, itemsPerPage=5)
     const page = parseInt(searchParams.get("page") || "1", 10);
-    const itemsPerPage = parseInt(searchParams.get("itemsPerPage") || "5", 10); // Removida a opção "0"
+    const itemsPerPage = parseInt(searchParams.get("itemsPerPage") || "5", 10);
     const skip = (page - 1) * itemsPerPage;
 
-    // 3. Consulta ao banco (com paginação em TODOS os casos)
     const [tickets, totalTickets] = await Promise.all([
       db.ticket.findMany({
         where: {
@@ -56,12 +53,12 @@ export async function GET(request: Request) {
           }),
         },
         skip,
-        take: itemsPerPage, // Sem condicional: sempre paginado
+        take: itemsPerPage,
+        orderBy: { id: "desc" }, // 🚀 Ordenação DESC para trazer os mais novos primeiro
       }),
-      db.ticket.count({ where: { ...filters } }), // Contagem total
+      db.ticket.count({ where: { ...filters } }),
     ]);
 
-    // 4. Resposta padronizada (sempre com paginação)
     return NextResponse.json(
       {
         tickets,
@@ -71,7 +68,7 @@ export async function GET(request: Request) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Erro ao buscar os acompanhantes:", error);
+    console.error("Erro ao buscar os ingressos:", error);
     return NextResponse.json(
       { error: "Erro no servidor", message: "Falha ao processar a requisição" },
       { status: 500 },

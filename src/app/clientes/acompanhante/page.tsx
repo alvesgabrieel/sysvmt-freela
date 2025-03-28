@@ -6,10 +6,11 @@ import {
   EyeIcon,
   TrashIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
+import Loader from "@/app/components/loader";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -47,13 +48,16 @@ const Acompanhante = () => {
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5); // Quantos itens por página
+  const [itemsPerPage] = useState(5);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Adicione o estado para controlar o diálogo
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(
     null,
   );
+
+  const [isLoading, setIsLoading] = useState(false);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (companion: Companion) => {
@@ -76,6 +80,15 @@ const Acompanhante = () => {
     );
   };
 
+  const handleAddCompanion = (newCompanion: Companion) => {
+    setCompanion((prevCompanions) => [newCompanion, ...prevCompanions]);
+  };
+
+  useEffect(() => {
+    fetchCompanions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
   //filtrar acompanhantes
   const fetchCompanions = async () => {
     try {
@@ -85,7 +98,7 @@ const Acompanhante = () => {
         itemsPerPage: itemsPerPage.toString(),
       }).toString();
 
-      const response = await fetch(`/api/companion/filter?${queryParams}`, {
+      const response = await fetch(`/api/companion/read?${queryParams}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -93,9 +106,9 @@ const Acompanhante = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        setCompanion(result.companions);
-        console.log("Resposta da API:", result);
+        const { companions, totalPages } = await response.json();
+        setCompanion(companions);
+        setTotalPages(totalPages || 1);
       } else {
         toast.error("Erro ao carregar os acompanhantes");
       }
@@ -141,37 +154,34 @@ const Acompanhante = () => {
   };
 
   // Função para aplicar os filtros
-  const applyFilters = () => {
-    // Remove campos vazios dos filtros, mas mantém todas as chaves
-    const cleanedFilters = {
-      id: "",
-      name: "",
-      phone: "",
-      email: "",
-      dateOfBirth: "",
-      ...Object.fromEntries(
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        Object.entries(filters).filter(([_, value]) => value !== ""),
-      ),
-    };
+  const applyFilters = async () => {
+    setIsLoading(true); // Ativa o loading
 
-    setFilters(cleanedFilters); // Atualiza os filtros
-    setCurrentPage(1); // Reseta para a primeira página após filtro
-    fetchCompanions(); // Busca os tickets com os filtros aplicados
+    try {
+      // Remove campos vazios dos filtros, mas mantém todas as chaves
+      const cleanedFilters = {
+        id: "",
+        name: "",
+        phone: "",
+        email: "",
+        dateOfBirth: "",
+        ...Object.fromEntries(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          Object.entries(filters).filter(([_, value]) => value !== ""),
+        ),
+      };
+
+      setFilters(cleanedFilters); // Atualiza os filtros
+      setCurrentPage(1); // Reseta para a primeira página após filtro
+      await fetchCompanions(); // Busca os tickets com os filtros aplicados
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  // Lógica de paginação
-  const indexOfLastCompanion = currentPage * itemsPerPage;
-  const indexOfFirstCompanion = indexOfLastCompanion - itemsPerPage;
-  const currentCompanion = companion.slice(
-    indexOfFirstCompanion,
-    indexOfLastCompanion,
-  );
 
   // Funções de navegação de página
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    fetchCompanions(); // Busca os tickets para a nova página
   };
 
   const handlePrevPage = () => {
@@ -179,11 +189,8 @@ const Acompanhante = () => {
   };
 
   const handleNextPage = () => {
-    const totalPages = Math.ceil(companion.length / itemsPerPage);
     if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
-
-  const totalPages = Math.ceil(companion.length / itemsPerPage);
 
   return (
     <div className="flex">
@@ -192,7 +199,7 @@ const Acompanhante = () => {
         {/* Barra de cima  */}
         <TopBar />
 
-        <RegisterCompanionDialog />
+        <RegisterCompanionDialog onAddCompanion={handleAddCompanion} />
 
         {/* Filtros */}
         <Card>
@@ -243,8 +250,16 @@ const Acompanhante = () => {
               }
               className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
-            <Button onClick={applyFilters} variant="outline">
-              Buscar
+            <Button
+              onClick={applyFilters}
+              variant="outline"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Buscar"
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -266,7 +281,7 @@ const Acompanhante = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentCompanion.map((companion) => (
+                  {companion.map((companion) => (
                     <TableRow key={companion.id}>
                       <TableCell>{companion.name}</TableCell>
                       <TableCell>{companion.phone}</TableCell>
@@ -294,7 +309,7 @@ const Acompanhante = () => {
                 </TableBody>
               </Table>
             ) : (
-              <p>Nenhum acompanhante encontrado com os filtros aplicados.</p>
+              <Loader fullScreen={false} />
             )}
 
             {/* Paginação Personalizada */}

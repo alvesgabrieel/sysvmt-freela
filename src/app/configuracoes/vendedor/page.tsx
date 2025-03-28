@@ -1,10 +1,16 @@
 "use client";
 
-import { EyeIcon, TrashIcon } from "lucide-react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  EyeIcon,
+  TrashIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { IMaskInput } from "react-imask"; // Importe o IMaskInput
 import { toast } from "sonner";
 
+import Loader from "@/app/components/loader";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -42,6 +48,7 @@ interface Saller {
 }
 
 const Vendedores = () => {
+  const [sallers, setSallers] = useState<Saller[]>([]);
   const [filters, setFilters] = useState({
     Id: "",
     name: "",
@@ -52,48 +59,19 @@ const Vendedores = () => {
     phone: "",
   });
 
-  const [sallers, setSallers] = useState<Saller[]>([]);
-
   // Estados e cidades
   const [states, setStates] = useState<{ id: number; nome: string }[]>([]);
   const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
 
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5); // Quantos itens por página
+  const [totalPages, setTotalPages] = useState(1);
+
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSaller, setSelectedSaller] = useState<Saller | null>(null);
 
-  // Buscar estados ao carregar a página
-  useEffect(() => {
-    const loadStates = async () => {
-      try {
-        const statesData = await fetchStates();
-        setStates(statesData);
-      } catch (error) {
-        toast.error("Erro ao carregar estados");
-        console.error("Erro ao carregar estados:", error);
-      }
-    };
-    loadStates();
-  }, []);
-
-  // Buscar cidades quando um estado é selecionado
-  useEffect(() => {
-    if (!filters.state) return;
-
-    const loadCities = async () => {
-      try {
-        const selectedState = states.find((s) => s.nome === filters.state);
-        if (selectedState) {
-          const citiesData = await fetchCitiesByState(selectedState.id);
-          setCities(citiesData);
-        }
-      } catch (error) {
-        toast.error("Erro ao carregar cidades");
-        console.error("Erro ao carregar cidades:", error);
-        setCities([]);
-      }
-    };
-    loadCities();
-  }, [filters.state, states]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (saller: Saller) => {
@@ -116,14 +94,54 @@ const Vendedores = () => {
     );
   };
 
+  const handleAddSaller = (newSaller: Saller) => {
+    setSallers((prevSallers) => [newSaller, ...prevSallers]);
+  };
+
+  useEffect(() => {
+    fetchSallers(); // Busca tudo (paginação já está ativa por padrão)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]); // Executa apenas no mount
+
+  // Buscar estados ao carregar a página
+  useEffect(() => {
+    const loadStates = async () => {
+      try {
+        const statesData = await fetchStates();
+        setStates(statesData);
+      } catch (error) {
+        toast.error("Erro ao carregar estados");
+        console.error("Erro ao carregar estados:", error);
+      }
+    };
+    loadStates();
+  }, []);
+
+  // Busca as cidades quando um estado é selecionado
+  const handleStateChange = async (stateId: number) => {
+    try {
+      const citiesData = await fetchCitiesByState(stateId);
+      setCities(citiesData);
+      setFilters((prevFilters) => ({
+        ...prevFilters,
+        city: "", // Reseta a cidade selecionada ao mudar o estado
+      }));
+    } catch (error) {
+      toast.error("Erro ao carregar cidades");
+      console.error("Erro ao carregar cidades:", error);
+    }
+  };
+
   // Função para buscar vendedores com base nos filtros
   const fetchSallers = async () => {
     try {
       const queryParams = new URLSearchParams({
         ...filters,
+        page: currentPage.toString(),
+        itemsPerPage: itemsPerPage.toString(),
       }).toString();
 
-      const response = await fetch(`/api/saller/filter?${queryParams}`, {
+      const response = await fetch(`/api/saller/read?${queryParams}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -132,7 +150,6 @@ const Vendedores = () => {
 
       if (response.ok) {
         const result = await response.json();
-        console.log("Dados retornados da API:", result);
 
         // Garante que todos os campos estejam presentes
         const sallersWithDefaults = result.sallers.map((saller: Saller) => ({
@@ -141,19 +158,20 @@ const Vendedores = () => {
           login: saller.login,
           email: saller.email,
           phone: saller.phone,
-          cpf: saller.cpf || "", // Valor padrão para cpf
-          rg: saller.rg || "", // Valor padrão para rg
-          observation: saller.observation || "", // Valor padrão para observation
-          pix: saller.pix || "", // Valor padrão para pix
-          photo: saller.photo || "", // Valor padrão para photo
+          cpf: saller.cpf || "",
+          rg: saller.rg || "",
+          observation: saller.observation || "",
+          pix: saller.pix || "",
+          photo: saller.photo || "",
           state: saller.state,
           city: saller.city,
-          adress: saller.adress || "", // Valor padrão para adress
-          number: saller.number || "", // Valor padrão para number
-          complement: saller.complement || "", // Valor padrão para complement
+          adress: saller.adress || "",
+          number: saller.number || "",
+          complement: saller.complement || "",
         }));
 
         setSallers(sallersWithDefaults);
+        setTotalPages(result.totalPages); // >>> veririficar
       } else {
         toast.error("Erro ao carregar os vendedores");
       }
@@ -187,9 +205,66 @@ const Vendedores = () => {
     }
   };
 
+  const handleFilterChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    setFilters((prevFilters) => ({
+      ...prevFilters,
+      [name]: value,
+    }));
+
+    // Se o estado for alterado, busca as cidades correspondentes
+    if (name === "state") {
+      const selectedState = states.find((s) => s.nome === value);
+      if (selectedState) {
+        handleStateChange(selectedState.id); // Passa o ID para buscar as cidades
+      } else {
+        setCities([]); // Limpa as cidades se nenhum estado for selecionado
+      }
+    }
+  };
+
   // Função para aplicar os filtros
-  const applyFilters = () => {
-    fetchSallers(); // Busca os vendedores com os filtros aplicados
+  const applyFilters = async () => {
+    setIsLoading(true);
+    try {
+      const cleanedFilters = {
+        Id: "",
+        name: "",
+        login: "",
+        email: "",
+        state: "",
+        city: "",
+        phone: "",
+        ...Object.fromEntries(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          Object.entries(filters).filter(([_, value]) => value !== ""),
+        ),
+      };
+      setFilters(cleanedFilters); // Atualiza os filtros
+      setCurrentPage(1); // Reseta para a primeira página após filtro
+      await fetchSallers(); // Busca os tickets com os filtros aplicados
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Funções de navegação de página
+  // 2. Funções de paginação - IMPORTANTE: atualize o estado PRIMEIRO
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page); // Atualiza a página primeiro
+    fetchSallers();
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1); // Atualiza o estado primeiro
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
 
   return (
@@ -199,7 +274,7 @@ const Vendedores = () => {
         {/* Barra de cima */}
         <TopBar />
 
-        <RegisterSallerDialog />
+        <RegisterSallerDialog onAddSaller={handleAddSaller} />
 
         {/* Filtros */}
         <Card>
@@ -209,37 +284,36 @@ const Vendedores = () => {
           <CardContent className="grid grid-cols-4 gap-4">
             <Input
               type="text"
+              name="Id"
               placeholder="Id"
-              value={filters.Id}
-              onChange={(e) => setFilters({ ...filters, Id: e.target.value })}
+              value={filters.Id || ""}
+              onChange={handleFilterChange}
             />
             <Input
               type="text"
+              name="name"
               placeholder="Nome"
-              value={filters.name}
-              onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+              value={filters.name || ""}
+              onChange={handleFilterChange}
             />
             <Input
               type="text"
+              name="login"
               placeholder="Login"
-              value={filters.login}
-              onChange={(e) =>
-                setFilters({ ...filters, login: e.target.value })
-              }
+              value={filters.login || ""}
+              onChange={handleFilterChange}
             />
             <Input
               type="text"
+              name="email"
               placeholder="Email"
-              value={filters.email}
-              onChange={(e) =>
-                setFilters({ ...filters, email: e.target.value })
-              }
+              value={filters.email || ""}
+              onChange={handleFilterChange}
             />
             <select
-              value={filters.state}
-              onChange={(e) =>
-                setFilters({ ...filters, state: e.target.value })
-              }
+              name="state"
+              value={filters.state || ""}
+              onChange={handleFilterChange}
               className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">Estado</option>
@@ -250,8 +324,9 @@ const Vendedores = () => {
               ))}
             </select>
             <select
-              value={filters.city}
-              onChange={(e) => setFilters({ ...filters, city: e.target.value })}
+              name="city"
+              value={filters.city || ""}
+              onChange={handleFilterChange}
               className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={!filters.state} // Desabilita se nenhum estado for selecionado
             >
@@ -263,14 +338,25 @@ const Vendedores = () => {
               ))}
             </select>
             <IMaskInput
+              name="phone"
               mask="(00) 00000-0000" // Máscara para telefone
               placeholder="Telefone"
-              value={filters.phone}
-              onAccept={(value) => setFilters({ ...filters, phone: value })}
+              value={filters.phone || ""}
+              onAccept={(value) =>
+                setFilters((prev) => ({ ...prev, phone: value }))
+              }
               className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
-            <Button onClick={applyFilters} variant="outline">
-              Buscar
+            <Button
+              onClick={applyFilters}
+              variant="outline"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
+              ) : (
+                "Buscar"
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -326,7 +412,30 @@ const Vendedores = () => {
                 </TableBody>
               </Table>
             ) : (
-              <p>Nenhum vendedor encontrado com os filtros aplicados.</p>
+              <Loader fullScreen={false} />
+            )}
+
+            {/* Paginação Personalizada */}
+            {sallers.length > 0 && (
+              <div className="mt-4 flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeftIcon className="h-5 w-5" />
+                </Button>
+                <span>
+                  Página {currentPage} de {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRightIcon className="h-5 w-5" />
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>

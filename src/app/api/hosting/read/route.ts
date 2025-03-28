@@ -56,7 +56,8 @@ export async function GET(request: Request) {
           }),
         },
         skip,
-        take: itemsPerPage, // Sem condicional: sempre paginado
+        take: itemsPerPage,
+        orderBy: { id: "desc" },
       }),
       db.hosting.count({ where: { ...filters } }), // Contagem total
     ]);

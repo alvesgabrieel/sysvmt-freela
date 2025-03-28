@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { parseBrazilianNumber } from "@/app/functions/backend/parse-brazilian-number";
 import { db } from "@/lib/prisma";
 
 export async function PUT(request: Request) {
@@ -16,6 +17,12 @@ export async function PUT(request: Request) {
 
     const data = await request.json();
 
+    // Converter os valores para float
+    const upfrontComission = parseBrazilianNumber(data.upfrontComission);
+    const installmentComission = parseBrazilianNumber(
+      data.installmentComission,
+    );
+
     const updatedTourOperator = await db.tourOperator.update({
       where: { id: Number(id) },
       data: {
@@ -26,8 +33,8 @@ export async function PUT(request: Request) {
         site: data.site,
         login: data.login,
         password: data.password,
-        upfrontComission: data.upfrontComission,
-        installmentComission: data.installmentComission,
+        upfrontComission,
+        installmentComission,
         observation: data.observation,
       },
     });

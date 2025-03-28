@@ -22,8 +22,8 @@ interface TourOperator {
   site: string;
   login: string;
   password: string;
-  upfrontComission: number; // Pode ser número ou string
-  installmentComission: number; // Pode ser número ou string
+  upfrontComission: number | string; // Pode ser número ou string
+  installmentComission: number | string; // Pode ser número ou string
   observation?: string | null;
 }
 
@@ -42,7 +42,13 @@ export const EditTourOperatorDialog = ({
 }: EditTourOperatorDialogProps) => {
   const [editedTourOperator, setEditedTourOperator] = useState<TourOperator>({
     ...tourOperator,
-    observation: tourOperator.observation || "", // Converte null/undefined para string vazia
+    observation: tourOperator.observation || "",
+    upfrontComission: tourOperator.upfrontComission
+      ? String(tourOperator.upfrontComission).replace(".", ",")
+      : "", // Converte número para string e substitui ponto por vírgula
+    installmentComission: tourOperator.installmentComission
+      ? String(tourOperator.installmentComission).replace(".", ",")
+      : "",
   });
 
   const handleChange = (
@@ -57,17 +63,34 @@ export const EditTourOperatorDialog = ({
     }));
   };
 
+  const formatCommissionInput = (value: string) => {
+    const input = value.replace(/\D/g, ""); // Remove tudo que não for número
+
+    if (input === "") {
+      return ""; // Se o campo estiver vazio, retorna vazio
+    } else if (input.length === 1) {
+      return input; // Caso tenha apenas 1 dígito
+    } else if (input.length === 2) {
+      return input.slice(0, 1) + "," + input.slice(1); // 1 dígito antes do ponto
+    } else {
+      return input.slice(0, 2) + "," + input.slice(2, 5); // 2 dígitos antes do ponto
+    }
+  };
+
+  const handleCommissionChange = (
+    value: string,
+    field: "upfrontComission" | "installmentComission",
+  ) => {
+    setEditedTourOperator((prev) => ({
+      ...prev,
+      [field]: formatCommissionInput(value), // Formata e atualiza apenas o campo necessário
+    }));
+  };
+
   const handleSave = async () => {
     try {
-      // Converte os valores de comissão para números
       const updatedData = {
         ...editedTourOperator,
-        upfrontComission: parseFloat(
-          String(editedTourOperator.upfrontComission),
-        ), // Converte para string antes de usar parseFloat
-        installmentComission: parseFloat(
-          String(editedTourOperator.installmentComission),
-        ), // Converte para string antes de usar parseFloat
         observation: editedTourOperator.observation?.trim() || null, // Converte string vazia para null
       };
 
@@ -157,22 +180,30 @@ export const EditTourOperatorDialog = ({
               onChange={handleChange}
             />
           </div>
+
           <div>
-            <Label>Comissão à vista</Label>
+            <Label>Comissão à vista (%)</Label>
             <Input
               name="upfrontComission"
               value={editedTourOperator.upfrontComission}
-              onChange={handleChange}
+              onChange={(e) =>
+                handleCommissionChange(e.target.value, "upfrontComission")
+              }
+              inputMode="decimal"
             />
           </div>
           <div>
-            <Label>Comissão parcelada</Label>
+            <Label>Comissão parcelada (%)</Label>
             <Input
               name="installmentComission"
               value={editedTourOperator.installmentComission}
-              onChange={handleChange}
+              onChange={(e) =>
+                handleCommissionChange(e.target.value, "installmentComission")
+              }
+              inputMode="decimal"
             />
           </div>
+
           <div className="grid w-full gap-1.5">
             {" "}
             {/* Container pai */}
