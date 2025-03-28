@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader } from "lucide-react";
-import { useState } from "react";
+import { KeyboardEvent, useState } from "react";
 import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
@@ -45,33 +45,63 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
   const [site, setSite] = useState<string>("");
   const [login, setLogin] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [upfrontComission, setUpfrontComission] = useState<string>("");
-  const [installmentComission, setInstallmentComission] = useState<string>("");
+  const [upfrontInput, setUpfrontInput] = useState<string>("");
+  const [installmentInput, setInstallmentInput] = useState<string>("");
   const [observation, setObservation] = useState<string>("");
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
-
   const [isLoading, setIsLoading] = useState(false);
 
-  const formatCommissionInput = (value: string) => {
-    const input = value.replace(/\D/g, ""); // Remove tudo que não for número
+  // Função para formatar o valor digitado como porcentagem (0.05%, 1.23%, etc)
+  const formatPercentage = (input: string): string => {
+    if (!input) return "";
 
-    if (input === "") {
-      return ""; // Se o campo estiver vazio, retorna vazio
-    } else if (input.length === 1) {
-      return input; // Caso tenha apenas 1 dígito
-    } else if (input.length === 2) {
-      return input.slice(0, 1) + "," + input.slice(1); // 1 dígito antes do ponto
-    } else {
-      return input.slice(0, 2) + "," + input.slice(2, 5); // 2 dígitos antes do ponto
-    }
+    const numbers = input.replace(/\D/g, "");
+    const padded = numbers.padStart(3, "0"); // Garante pelo menos 3 dígitos (1 + 2 decimais)
+
+    const integerPart = padded.slice(0, -2) || "0";
+    const decimalPart = padded.slice(-2);
+
+    return `${integerPart},${decimalPart}%`;
   };
 
-  const handleCommissionChange = (
-    value: string,
-    setter: React.Dispatch<React.SetStateAction<string>>,
+  // Função para lidar com as teclas pressionadas
+  const handlePercentageKeyDown = (
+    e: KeyboardEvent<HTMLInputElement>,
+    currentValue: string,
+    setValue: React.Dispatch<React.SetStateAction<string>>,
   ) => {
-    setter(formatCommissionInput(value));
+    // Permite apenas números e Backspace
+    if (!/[0-9]|Backspace/.test(e.key)) {
+      e.preventDefault();
+      return;
+    }
+
+    let newValue = currentValue.replace(/\D/g, "");
+
+    if (e.key === "Backspace") {
+      newValue = newValue.slice(0, -1);
+    } else {
+      newValue += e.key;
+    }
+
+    // Limita o tamanho para evitar números muito grandes
+    if (newValue.length > 5) {
+      // Máximo 999,99%
+      return;
+    }
+
+    setValue(newValue);
+  };
+
+  // Converte o valor digitado para o formato que o backend espera (ex: "123" → "1.23")
+  const formatForBackend = (input: string): string => {
+    if (!input) return "0,00"; // Valor padrão quando vazio
+
+    const numbers = input.replace(/\D/g, "");
+    const padded = numbers.padStart(3, "0"); // Garante 2 casas decimais
+
+    return `${padded.slice(0, -2)},${padded.slice(-2)}`;
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -91,14 +121,14 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
         site,
         login,
         password,
-        upfrontComission,
-        installmentComission,
+        upfrontComission: formatForBackend(upfrontInput),
+        installmentComission: formatForBackend(installmentInput),
         observation,
       }),
     });
+
     if (response.ok) {
       const result = await response.json();
-
       onAddTourOperator(result.tourOperator);
       toast.success(result.message);
       setIsOpen(false);
@@ -110,8 +140,8 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
       setSite("");
       setLogin("");
       setPassword("");
-      setUpfrontComission("");
-      setInstallmentComission("");
+      setUpfrontInput("");
+      setInstallmentInput("");
       setObservation("");
     } else {
       const error = await response.json();
@@ -231,12 +261,12 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
             <Input
               id="comissao-a-vista"
               type="text"
-              inputMode="decimal"
               className="col-span-3"
-              value={upfrontComission}
-              onChange={(e) =>
-                handleCommissionChange(e.target.value, setUpfrontComission)
+              value={formatPercentage(upfrontInput)}
+              onKeyDown={(e) =>
+                handlePercentageKeyDown(e, upfrontInput, setUpfrontInput)
               }
+              readOnly
               required
             />
           </div>
@@ -247,12 +277,16 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
             <Input
               id="comissao-parcelada"
               type="text"
-              inputMode="decimal"
               className="col-span-3"
-              value={installmentComission}
-              onChange={(e) =>
-                handleCommissionChange(e.target.value, setInstallmentComission)
+              value={formatPercentage(installmentInput)}
+              onKeyDown={(e) =>
+                handlePercentageKeyDown(
+                  e,
+                  installmentInput,
+                  setInstallmentInput,
+                )
               }
+              readOnly
               required
             />
           </div>
