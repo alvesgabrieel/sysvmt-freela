@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -41,12 +41,12 @@ export const EditTourOperatorDialog = ({
   onSave,
 }: EditTourOperatorDialogProps) => {
   // Converte o valor inicial para o formato de digitação (remove vírgula e símbolo %)
-  const convertInitialValue = (value: number | string): string => {
-    if (typeof value === "number") {
-      return String(value).replace(".", "");
-    }
-    return value.replace(/,|%/g, "");
-  };
+  // const convertInitialValue = (value: number | string): string => {
+  //   if (typeof value === "number") {
+  //     return String(value).replace(".", "");
+  //   }
+  //   return value.replace(/,|%/g, "");
+  // };
 
   const [editedTourOperator, setEditedTourOperator] = useState<TourOperator>({
     ...tourOperator,
@@ -54,54 +54,54 @@ export const EditTourOperatorDialog = ({
   });
 
   // States separados para os valores brutos das comissões
-  const [upfrontInput, setUpfrontInput] = useState<string>(() =>
-    convertInitialValue(tourOperator.upfrontComission),
-  );
-  const [installmentInput, setInstallmentInput] = useState<string>(() =>
-    convertInitialValue(tourOperator.installmentComission),
-  );
+  // const [upfrontInput, setUpfrontInput] = useState<string>(() =>
+  //   convertInitialValue(tourOperator.upfrontComission),
+  // );
+  // const [installmentInput, setInstallmentInput] = useState<string>(() =>
+  //   convertInitialValue(tourOperator.installmentComission),
+  // );
 
-  // Função para formatar o valor digitado como porcentagem (0,05%, 1,23%, etc)
-  const formatPercentage = (input: string): string => {
-    if (!input) return "";
+  // // Função para formatar o valor digitado como porcentagem (0,05%, 1,23%, etc)
+  // const formatPercentage = (input: string): string => {
+  //   if (!input) return "";
 
-    const numbers = input.replace(/\D/g, "");
-    const padded = numbers.padStart(3, "0"); // Garante pelo menos 3 dígitos (1 + 2 decimais)
+  //   const numbers = input.replace(/\D/g, "");
+  //   const padded = numbers.padStart(3, "0"); // Garante pelo menos 3 dígitos (1 + 2 decimais)
 
-    const integerPart = padded.slice(0, -2) || "0";
-    const decimalPart = padded.slice(-2);
+  //   const integerPart = padded.slice(0, -2) || "0";
+  //   const decimalPart = padded.slice(-2);
 
-    return `${integerPart},${decimalPart}%`;
-  };
+  //   return `${integerPart},${decimalPart}%`;
+  // };
 
-  // Função para lidar com as teclas pressionadas
-  const handlePercentageKeyDown = (
-    e: KeyboardEvent<HTMLInputElement>,
-    currentValue: string,
-    setValue: React.Dispatch<React.SetStateAction<string>>,
-  ) => {
-    // Permite apenas números e Backspace
-    if (!/[0-9]|Backspace/.test(e.key)) {
-      e.preventDefault();
-      return;
-    }
+  // // Função para lidar com as teclas pressionadas
+  // const handlePercentageKeyDown = (
+  //   e: KeyboardEvent<HTMLInputElement>,
+  //   currentValue: string,
+  //   setValue: React.Dispatch<React.SetStateAction<string>>,
+  // ) => {
+  //   // Permite apenas números e Backspace
+  //   if (!/[0-9]|Backspace/.test(e.key)) {
+  //     e.preventDefault();
+  //     return;
+  //   }
 
-    let newValue = currentValue.replace(/\D/g, "");
+  //   let newValue = currentValue.replace(/\D/g, "");
 
-    if (e.key === "Backspace") {
-      newValue = newValue.slice(0, -1);
-    } else {
-      newValue += e.key;
-    }
+  //   if (e.key === "Backspace") {
+  //     newValue = newValue.slice(0, -1);
+  //   } else {
+  //     newValue += e.key;
+  //   }
 
-    // Limita o tamanho para evitar números muito grandes
-    if (newValue.length > 5) {
-      // Máximo 999,99%
-      return;
-    }
+  //   // Limita o tamanho para evitar números muito grandes
+  //   if (newValue.length > 5) {
+  //     // Máximo 999,99%
+  //     return;
+  //   }
 
-    setValue(newValue);
-  };
+  //   setValue(newValue);
+  // };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -118,12 +118,12 @@ export const EditTourOperatorDialog = ({
       // Prepara os dados para enviar (mantém como string com vírgula)
       const updatedData = {
         ...editedTourOperator,
-        upfrontComission: upfrontInput
-          ? `${upfrontInput.slice(0, -2) || "0"},${upfrontInput.slice(-2).padEnd(2, "0")}`
-          : "0,00",
-        installmentComission: installmentInput
-          ? `${installmentInput.slice(0, -2) || "0"},${installmentInput.slice(-2).padEnd(2, "0")}`
-          : "0,00",
+        // upfrontComission: upfrontInput
+        //   ? `${upfrontInput.slice(0, -2) || "0"},${upfrontInput.slice(-2).padEnd(2, "0")}`
+        //   : "0,00",
+        // installmentComission: installmentInput
+        //   ? `${installmentInput.slice(0, -2) || "0"},${installmentInput.slice(-2).padEnd(2, "0")}`
+        //   : "0,00",
         observation: editedTourOperator.observation?.trim() || null,
       };
 
@@ -219,7 +219,7 @@ export const EditTourOperatorDialog = ({
           </div>
 
           {/* Inputs de comissão com a nova lógica */}
-          <div>
+          {/* <div>
             <Label>Comissão à vista (%)</Label>
             <Input
               value={formatPercentage(upfrontInput)}
@@ -244,7 +244,7 @@ export const EditTourOperatorDialog = ({
               readOnly
               inputMode="decimal"
             />
-          </div>
+          </div> */}
 
           <div className="grid w-full gap-1.5">
             <Label>Observação</Label>

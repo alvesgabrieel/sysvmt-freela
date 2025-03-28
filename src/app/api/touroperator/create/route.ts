@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { parseBrazilianNumber } from "@/app/functions/backend/parse-brazilian-number";
+// import { parseBrazilianNumber } from "@/app/functions/backend/parse-brazilian-number";
 import { db } from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -13,9 +13,7 @@ export async function POST(request: Request) {
       !data.email ||
       !data.site ||
       !data.login ||
-      !data.password ||
-      data.upfrontComission === undefined ||
-      data.installmentComission === undefined
+      !data.password
     ) {
       return NextResponse.json(
         {
@@ -27,20 +25,20 @@ export async function POST(request: Request) {
     }
 
     // Converter os valores para float
-    const upfrontComission = parseBrazilianNumber(data.upfrontComission);
-    const installmentComission = parseBrazilianNumber(
-      data.installmentComission,
-    );
+    // const upfrontComission = parseBrazilianNumber(data.upfrontComission);
+    // const installmentComission = parseBrazilianNumber(
+    //   data.installmentComission,
+    // );
 
-    if (isNaN(upfrontComission) || isNaN(installmentComission)) {
-      return NextResponse.json(
-        {
-          error: "Dados inválidos.",
-          message: "Comissões devem ser números válidos.",
-        },
-        { status: 400 },
-      );
-    }
+    // if (isNaN(upfrontComission) || isNaN(installmentComission)) {
+    //   return NextResponse.json(
+    //     {
+    //       error: "Dados inválidos.",
+    //       message: "Comissões devem ser números válidos.",
+    //     },
+    //     { status: 400 },
+    //   );
+    // }
 
     const existingTourOperator = await db.tourOperator.findFirst({
       where: {
@@ -67,8 +65,8 @@ export async function POST(request: Request) {
         site: data.site,
         login: data.login,
         password: data.password,
-        upfrontComission,
-        installmentComission,
+        upfrontComission: data.upfrontComission,
+        installmentComission: data.installmentComission,
         observation: data.observation,
       },
     });

@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader } from "lucide-react";
-import { KeyboardEvent, useState } from "react";
+import { useState } from "react";
 import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
@@ -45,64 +45,64 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
   const [site, setSite] = useState<string>("");
   const [login, setLogin] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [upfrontInput, setUpfrontInput] = useState<string>("");
-  const [installmentInput, setInstallmentInput] = useState<string>("");
+  // const [upfrontInput, setUpfrontInput] = useState<string>("");
+  // const [installmentInput, setInstallmentInput] = useState<string>("");
   const [observation, setObservation] = useState<string>("");
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Função para formatar o valor digitado como porcentagem (0.05%, 1.23%, etc)
-  const formatPercentage = (input: string): string => {
-    if (!input) return "";
+  // // Função para formatar o valor digitado como porcentagem (0.05%, 1.23%, etc)
+  // const formatPercentage = (input: string): string => {
+  //   if (!input) return "";
 
-    const numbers = input.replace(/\D/g, "");
-    const padded = numbers.padStart(3, "0"); // Garante pelo menos 3 dígitos (1 + 2 decimais)
+  //   const numbers = input.replace(/\D/g, "");
+  //   const padded = numbers.padStart(3, "0"); // Garante pelo menos 3 dígitos (1 + 2 decimais)
 
-    const integerPart = padded.slice(0, -2) || "0";
-    const decimalPart = padded.slice(-2);
+  //   const integerPart = padded.slice(0, -2) || "0";
+  //   const decimalPart = padded.slice(-2);
 
-    return `${integerPart},${decimalPart}%`;
-  };
+  //   return `${integerPart},${decimalPart}%`;
+  // };
 
-  // Função para lidar com as teclas pressionadas
-  const handlePercentageKeyDown = (
-    e: KeyboardEvent<HTMLInputElement>,
-    currentValue: string,
-    setValue: React.Dispatch<React.SetStateAction<string>>,
-  ) => {
-    // Permite apenas números e Backspace
-    if (!/[0-9]|Backspace/.test(e.key)) {
-      e.preventDefault();
-      return;
-    }
+  // // Função para lidar com as teclas pressionadas
+  // const handlePercentageKeyDown = (
+  //   e: KeyboardEvent<HTMLInputElement>,
+  //   currentValue: string,
+  //   setValue: React.Dispatch<React.SetStateAction<string>>,
+  // ) => {
+  //   // Permite apenas números e Backspace
+  //   if (!/[0-9]|Backspace/.test(e.key)) {
+  //     e.preventDefault();
+  //     return;
+  //   }
 
-    let newValue = currentValue.replace(/\D/g, "");
+  //   let newValue = currentValue.replace(/\D/g, "");
 
-    if (e.key === "Backspace") {
-      newValue = newValue.slice(0, -1);
-    } else {
-      newValue += e.key;
-    }
+  //   if (e.key === "Backspace") {
+  //     newValue = newValue.slice(0, -1);
+  //   } else {
+  //     newValue += e.key;
+  //   }
 
-    // Limita o tamanho para evitar números muito grandes
-    if (newValue.length > 5) {
-      // Máximo 999,99%
-      return;
-    }
+  //   // Limita o tamanho para evitar números muito grandes
+  //   if (newValue.length > 5) {
+  //     // Máximo 999,99%
+  //     return;
+  //   }
 
-    setValue(newValue);
-  };
+  //   setValue(newValue);
+  // };
 
-  // Converte o valor digitado para o formato que o backend espera (ex: "123" → "1.23")
-  const formatForBackend = (input: string): string => {
-    if (!input) return "0,00"; // Valor padrão quando vazio
+  // // Converte o valor digitado para o formato que o backend espera (ex: "123" → "1.23")
+  // const formatForBackend = (input: string): string => {
+  //   if (!input) return "0,00"; // Valor padrão quando vazio
 
-    const numbers = input.replace(/\D/g, "");
-    const padded = numbers.padStart(3, "0"); // Garante 2 casas decimais
+  //   const numbers = input.replace(/\D/g, "");
+  //   const padded = numbers.padStart(3, "0"); // Garante 2 casas decimais
 
-    return `${padded.slice(0, -2)},${padded.slice(-2)}`;
-  };
+  //   return `${padded.slice(0, -2)},${padded.slice(-2)}`;
+  // };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -121,8 +121,8 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
         site,
         login,
         password,
-        upfrontComission: formatForBackend(upfrontInput),
-        installmentComission: formatForBackend(installmentInput),
+        //upfrontComission: formatForBackend(upfrontInput),
+        //installmentComission: formatForBackend(installmentInput),
         observation,
       }),
     });
@@ -140,8 +140,8 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
       setSite("");
       setLogin("");
       setPassword("");
-      setUpfrontInput("");
-      setInstallmentInput("");
+      // setUpfrontInput("");
+      // setInstallmentInput("");
       setObservation("");
     } else {
       const error = await response.json();
@@ -254,7 +254,7 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
+          {/* <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="comissao-a-vista" className="text-right">
               Comissão à vista (%)
             </Label>
@@ -289,7 +289,7 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
               readOnly
               required
             />
-          </div>
+          </div> */}
 
           <div className="grid grid-cols-4 gap-4">
             <Label htmlFor="observacao" className="self-start pt-2 text-right">
