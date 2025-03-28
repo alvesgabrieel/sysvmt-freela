@@ -115,13 +115,13 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
           Cadastrar cashback
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
+      <DialogContent className="sm:max-w-[400px] md:max-w-[600px] lg:max-w-[650px]">
         <DialogHeader>
           <DialogTitle>Cadastrar cashback</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-5">
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="gap-45 grid grid-cols-4 items-center">
             <Label htmlFor="nome" className="text-right">
               Nome
             </Label>
@@ -134,8 +134,11 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
               required
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="data-inicial" className="text-right">
+          <div className="gap-45 grid grid-cols-4 items-center">
+            <Label
+              htmlFor="data-inicial"
+              className="whitespace-nowrap text-right"
+            >
               Data inicial da vigência
             </Label>
             <IMaskInput
@@ -147,8 +150,11 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
               required
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="data-final" className="text-right">
+          <div className="gap-45 grid grid-cols-4 items-center">
+            <Label
+              htmlFor="data-final"
+              className="whitespace-nowrap text-right"
+            >
               Data final da vigência
             </Label>
             <IMaskInput
@@ -160,8 +166,8 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="comissao-a-vista" className="text-right">
+          <div className="gap-45 grid grid-cols-4 items-center">
+            <Label htmlFor="comissao-a-vista" className="w-32 text-right">
               Percentual (%)
             </Label>
             <Input
@@ -177,8 +183,8 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="nome" className="text-right">
+          <div className="gap-45 grid grid-cols-4 items-center">
+            <Label htmlFor="nome" className="w-28 text-right">
               Validade (dias)
             </Label>
             <Input
