@@ -45,7 +45,6 @@ interface Client {
 const Cliente = () => {
   const [client, setClient] = useState<Client[]>([]);
   const [filters, setFilters] = useState({
-    id: "",
     name: "",
     login: "",
     state: "",
@@ -206,7 +205,6 @@ const Cliente = () => {
     setIsLoading(true);
     try {
       const cleanedFilters = {
-        id: "",
         name: "",
         login: "",
         cpf: "",
@@ -260,13 +258,6 @@ const Cliente = () => {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-4 gap-4">
-            <Input
-              type="text"
-              name="id"
-              placeholder="ID do cliente"
-              value={filters.id || ""}
-              onChange={handleFilterChange}
-            />
             <Input
               type="text"
               name="name"

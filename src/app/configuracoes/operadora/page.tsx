@@ -44,7 +44,6 @@ interface TourOperator {
 const Operadoras = () => {
   const [tourOperators, setTourOperators] = useState<TourOperator[]>([]);
   const [filters, setFilters] = useState({
-    Id: "",
     name: "",
     contact: "",
     phone: "",
@@ -171,7 +170,6 @@ const Operadoras = () => {
     setIsLoading(true);
     try {
       const cleanedFilters = {
-        Id: "",
         name: "",
         contact: "",
         phone: "",
@@ -221,13 +219,6 @@ const Operadoras = () => {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-4 gap-4">
-            <Input
-              type="text"
-              name="Id"
-              placeholder="Id"
-              value={filters.Id || ""}
-              onChange={handleFilterChange}
-            />
             <Input
               type="text"
               name="name"

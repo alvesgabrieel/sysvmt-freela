@@ -50,7 +50,6 @@ interface Saller {
 const Vendedores = () => {
   const [sallers, setSallers] = useState<Saller[]>([]);
   const [filters, setFilters] = useState({
-    Id: "",
     name: "",
     login: "",
     email: "",
@@ -230,7 +229,6 @@ const Vendedores = () => {
     setIsLoading(true);
     try {
       const cleanedFilters = {
-        Id: "",
         name: "",
         login: "",
         email: "",
@@ -282,13 +280,6 @@ const Vendedores = () => {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-4 gap-4">
-            <Input
-              type="text"
-              name="Id"
-              placeholder="Id"
-              value={filters.Id || ""}
-              onChange={handleFilterChange}
-            />
             <Input
               type="text"
               name="name"

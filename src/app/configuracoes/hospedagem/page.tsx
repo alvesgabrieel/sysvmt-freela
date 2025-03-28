@@ -39,7 +39,6 @@ type Hosting = {
 const Hospedagem = () => {
   const [hosting, setHosting] = useState<Hosting[]>([]);
   const [filters, setFilters] = useState({
-    id: "",
     name: "",
     state: "",
     city: "",
@@ -199,7 +198,6 @@ const Hospedagem = () => {
     setIsLoading(true);
     try {
       const cleanedFilters = {
-        id: "",
         name: "",
         state: "",
         city: "",
@@ -248,13 +246,6 @@ const Hospedagem = () => {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-4 gap-4">
-            <Input
-              type="text"
-              name="id"
-              placeholder="ID"
-              value={filters.id || ""}
-              onChange={handleFilterChange}
-            />
             <Input
               type="text"
               name="name"

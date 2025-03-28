@@ -39,7 +39,6 @@ interface Cashback {
 
 const CashbackComponent = () => {
   const [filters, setFilters] = useState({
-    Id: "",
     name: "",
     startDate: "",
     endDate: "",
@@ -193,7 +192,6 @@ const CashbackComponent = () => {
     setIsLoading(true);
     try {
       const cleanedFilters = {
-        Id: "",
         name: "",
         startDate: "",
         endDate: "",
@@ -243,12 +241,6 @@ const CashbackComponent = () => {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-4 gap-4">
-            <Input
-              type="text"
-              placeholder="Id"
-              value={filters.Id}
-              onChange={(e) => setFilters({ ...filters, Id: e.target.value })}
-            />
             <Input
               type="text"
               placeholder="Nome"
