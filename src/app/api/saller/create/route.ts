@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { parseBrazilianNumber } from "@/app/functions/backend/parse-brazilian-number";
 import { db } from "@/lib/prisma";
+
+interface CommissionData {
+  operadora: string;
+  aVista: string;
+  parcelado: string;
+}
 
 export async function POST(request: Request) {
   try {
@@ -22,6 +29,30 @@ export async function POST(request: Request) {
     const adress = formData.get("adress") as string;
     const number = formData.get("number") as string;
     const complement = formData.get("complement") as string;
+
+    // Extrai as comissões (JSON string)
+    const commissionsJSON = formData.get("commissions") as string;
+    const commissions = commissionsJSON ? JSON.parse(commissionsJSON) : [];
+
+    // Validação das comissões (se houver)
+    if (commissions.length > 0) {
+      const invalidCommissions = commissions.some(
+        (c: CommissionData) =>
+          !c.operadora ||
+          isNaN(parseBrazilianNumber(c.aVista)) ||
+          isNaN(parseBrazilianNumber(c.parcelado)),
+      );
+
+      if (invalidCommissions) {
+        return NextResponse.json(
+          {
+            error: "Comissões inválidas",
+            message: "Preencha todas as comissões corretamente.",
+          },
+          { status: 400 },
+        );
+      }
+    }
 
     // Validação dos campos obrigatórios
     if (
@@ -77,28 +108,45 @@ export async function POST(request: Request) {
       photoBuffer = await photo.arrayBuffer(); // Converte a foto para um buffer
     }
 
-    // Cria o vendedor no banco de dados
-    const saller = await db.saller.create({
-      data: {
-        name,
-        login,
-        email,
-        phone,
-        cpf,
-        rg,
-        observation,
-        pix,
-        photo: photoBuffer ? Buffer.from(photoBuffer) : null, // Armazena a foto como buffer
-        state,
-        city,
-        adress,
-        number,
-        complement,
-      },
+    // Transaction para cadastro atômico
+    const result = await db.$transaction(async (prisma) => {
+      // Cria o vendedor
+      const saller = await prisma.saller.create({
+        data: {
+          name,
+          login,
+          email,
+          phone,
+          cpf,
+          rg,
+          observation,
+          pix,
+          photo: photoBuffer ? Buffer.from(photoBuffer) : null,
+          state,
+          city,
+          adress,
+          number,
+          complement,
+        },
+      });
+
+      // Cria as comissões (se existirem)
+      if (commissions.length > 0) {
+        await prisma.sallerCommission.createMany({
+          data: commissions.map((c: CommissionData) => ({
+            sallerId: saller.id,
+            tourOperatorId: Number(c.operadora),
+            upfrontCommission: parseBrazilianNumber(c.aVista),
+            installmentCommission: parseBrazilianNumber(c.parcelado),
+          })),
+        });
+      }
+
+      return saller;
     });
 
     return NextResponse.json(
-      { message: "Saller criado com sucesso.", saller },
+      { message: "Saller criado com sucesso.", saller: result },
       { status: 201 },
     );
   } catch (error) {

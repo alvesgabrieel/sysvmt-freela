@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const searchParams = url.searchParams;
 
-    // 1. Extrai filtros (mantido igual)
+    // 1. Extrai filtros
     const filters: Filters = {};
     if (searchParams.has("id") && searchParams.get("id") !== "") {
       filters.id = parseInt(searchParams.get("id")!, 10);
@@ -41,12 +41,12 @@ export async function GET(request: Request) {
       filters.phone = searchParams.get("phone")!;
     }
 
-    // 2. Paginação SEMPRE ativa (valores padrão: page=1, itemsPerPage=5)
+    // 2. Paginação
     const page = parseInt(searchParams.get("page") || "1", 10);
-    const itemsPerPage = parseInt(searchParams.get("itemsPerPage") || "5", 10); // Removida a opção "0"
+    const itemsPerPage = parseInt(searchParams.get("itemsPerPage") || "5", 10);
     const skip = (page - 1) * itemsPerPage;
 
-    // 3. Consulta ao banco (com paginação em TODOS os casos)
+    // 3. Consulta ao banco com relações
     const [sallers, totalSallers] = await Promise.all([
       db.saller.findMany({
         where: {
@@ -64,24 +64,48 @@ export async function GET(request: Request) {
           ...(filters.city && { city: filters.city }),
           ...(filters.phone && { phone: filters.phone }),
         },
+        include: {
+          commissions: {
+            include: {
+              tourOperator: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
         skip,
         take: itemsPerPage,
         orderBy: { id: "desc" },
       }),
-      db.saller.count({ where: { ...filters } }), // Contagem total
+      db.saller.count({ where: { ...filters } }),
     ]);
 
-    // 4. Resposta padronizada (sempre com paginação)
+    // 4. Formata a resposta para incluir comissões
+    const formattedSallers = sallers.map((saller) => ({
+      ...saller,
+      commissions: saller.commissions.map((commission) => ({
+        id: commission.id,
+        tourOperatorId: commission.tourOperatorId,
+        tourOperatorName: commission.tourOperator.name,
+        upfrontCommission: commission.upfrontCommission,
+        installmentCommission: commission.installmentCommission,
+      })),
+    }));
+
+    // 5. Resposta padronizada
     return NextResponse.json(
       {
-        sallers,
+        sallers: formattedSallers,
         totalPages: Math.ceil(totalSallers / itemsPerPage),
         currentPage: page,
       },
       { status: 200 },
     );
   } catch (error) {
-    console.error("Erro ao buscar os acompanhantes:", error);
+    console.error("Erro ao buscar os vendedores:", error);
     return NextResponse.json(
       { error: "Erro no servidor", message: "Falha ao processar a requisição" },
       { status: 500 },

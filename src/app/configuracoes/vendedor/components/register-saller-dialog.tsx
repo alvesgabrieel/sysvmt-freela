@@ -1,6 +1,6 @@
 import { Loader, Minus, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
-import { IMaskInput } from "react-imask"; // Importe o IMaskInput
+import { KeyboardEvent, useEffect, useState } from "react";
+import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState("dados-basicos");
   const [comissoes, setComissoes] = useState([
-    { operadora: "", aVista: "", parcelado: "" },
+    { operadora: "", aVistaInput: "", parceladoInput: "" },
   ]);
   const [file, setFile] = useState<File | null>(null);
 
@@ -69,10 +69,68 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
   const [selectedCity, setSelectedCity] = useState("");
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
-
   const [isLoading, setIsLoading] = useState(false);
+  const [operadoras, setOperadoras] = useState<{ id: number; name: string }[]>(
+    [],
+  );
 
-  // Buscar estados ao carregar o componente
+  // Formata o valor para exibição (ex: "154" → "1,54%")
+  const formatPercentage = (input: string): string => {
+    if (!input) return "";
+    const numbers = input.replace(/\D/g, "");
+    const padded = numbers.padStart(3, "0");
+    const integerPart = padded.slice(0, -2) || "0";
+    const decimalPart = padded.slice(-2);
+    return `${integerPart},${decimalPart}%`;
+  };
+
+  // Converte para formato com vírgula (ex: "154" → "1,54")
+  const formatForBackend = (input: string): string => {
+    if (!input) return "";
+    const numbers = input.replace(/\D/g, "");
+    const padded = numbers.padStart(3, "0");
+    return `${padded.slice(0, -2)},${padded.slice(-2)}`;
+  };
+
+  // Manipula a digitação
+  const handlePercentageKeyDown = (
+    e: KeyboardEvent<HTMLInputElement>,
+    currentValue: string,
+    setValue: (value: string) => void,
+  ) => {
+    if (!/[0-9]|Backspace/.test(e.key)) {
+      e.preventDefault();
+      return;
+    }
+
+    let newValue = currentValue.replace(/\D/g, "");
+
+    if (e.key === "Backspace") {
+      newValue = newValue.slice(0, -1);
+    } else {
+      newValue += e.key;
+    }
+
+    if (newValue.length > 5) return;
+    setValue(newValue);
+  };
+
+  useEffect(() => {
+    const carregarOperadoras = async () => {
+      try {
+        const response = await fetch("/api/touroperator/list");
+        if (!response.ok) throw new Error(`Erro: ${response.status}`);
+        const operadoras = await response.json();
+        setOperadoras(operadoras);
+      } catch (error) {
+        console.error("Erro ao carregar operadoras:", error);
+        toast.error("Não foi possível carregar as operadoras");
+        setOperadoras([]);
+      }
+    };
+    carregarOperadoras();
+  }, []);
+
   useEffect(() => {
     const loadStates = async () => {
       try {
@@ -86,10 +144,8 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
     loadStates();
   }, []);
 
-  // Buscar cidades quando um estado é selecionado
   useEffect(() => {
     if (!selectedState) return;
-
     const loadCities = async () => {
       try {
         const selectedStateData = states.find((s) => s.nome === selectedState);
@@ -106,8 +162,29 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
     loadCities();
   }, [selectedState, states]);
 
+  const handleComissaoChange = (
+    index: number,
+    field: string,
+    value: string,
+    isInputValue: boolean = false,
+  ) => {
+    const novasComissoes = [...comissoes];
+    if (isInputValue) {
+      novasComissoes[index] = {
+        ...novasComissoes[index],
+        [`${field}Input`]: value,
+      };
+    } else {
+      novasComissoes[index] = { ...novasComissoes[index], [field]: value };
+    }
+    setComissoes(novasComissoes);
+  };
+
   const adicionarComissao = () => {
-    setComissoes([...comissoes, { operadora: "", aVista: "", parcelado: "" }]);
+    setComissoes([
+      ...comissoes,
+      { operadora: "", aVistaInput: "", parceladoInput: "" },
+    ]);
   };
 
   const removerComissao = (index: number) => {
@@ -120,7 +197,25 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
 
   const handleSubmit = async () => {
     setIsLoading(true);
-    // Validação da foto
+
+    // Prepara as comissões com valores no formato "15,4" (string com vírgula)
+    const comissoesConvertidas = comissoes.map((comissao) => ({
+      operadora: comissao.operadora,
+      aVista: formatForBackend(comissao.aVistaInput), // "15,4"
+      parcelado: formatForBackend(comissao.parceladoInput), // "12,5"
+    }));
+
+    const comissoesInvalidas = comissoesConvertidas.some(
+      (c) => c.operadora && (!c.aVista || !c.parcelado),
+    );
+
+    if (comissoesInvalidas) {
+      toast.error("Preencha todas as comissões corretamente");
+      setIsLoading(false);
+      return;
+    }
+
+    const comissoesParaEnviar = comissoesConvertidas.filter((c) => c.operadora);
 
     if (file && !file.type.startsWith("image/")) {
       toast.error("Por favor, selecione um arquivo de imagem válido.");
@@ -128,25 +223,16 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
     }
 
     const dataToSend = new FormData();
-
-    // Adiciona os dados do formulário
     Object.entries(formData).forEach(([key, value]) => {
       if (value) dataToSend.append(key, value);
     });
 
-    // Adiciona estados e cidades
     if (selectedState) dataToSend.append("state", selectedState);
     if (selectedCity) dataToSend.append("city", selectedCity);
-
-    // Adiciona comissões como JSON
-    if (comissoes.length > 0) {
-      dataToSend.append("commissions", JSON.stringify(comissoes));
+    if (comissoesParaEnviar.length > 0) {
+      dataToSend.append("commissions", JSON.stringify(comissoesParaEnviar));
     }
-
-    // Adiciona a foto se existir
-    if (file) {
-      dataToSend.append("photo", file);
-    }
+    if (file) dataToSend.append("photo", file);
 
     try {
       const response = await fetch("/api/saller/create", {
@@ -157,7 +243,6 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
       if (response.ok) {
         const result = await response.json();
         toast.success("Vendedor cadastrado com sucesso!");
-        // Resetar todos os estados
         onAddSaller(result.saller);
         setIsOpen(false);
         setIsLoading(false);
@@ -177,7 +262,7 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
         setSelectedState("");
         setSelectedCity("");
         setFile(null);
-        setComissoes([{ operadora: "", aVista: "", parcelado: "" }]);
+        setComissoes([{ operadora: "", aVistaInput: "", parceladoInput: "" }]);
       } else {
         const error = await response.json();
         toast.error(error.message);
@@ -185,6 +270,7 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
     } catch (error) {
       console.error("Erro ao enviar dados:", error);
       toast.error("Erro ao conectar com o servidor");
+      setIsLoading(false);
     }
   };
 
@@ -200,7 +286,6 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
           <DialogTitle>Cadastrar vendedor</DialogTitle>
         </DialogHeader>
 
-        {/* Abas para Navegação */}
         <div className="mb-6 mt-4 flex space-x-4">
           <button
             className={`px-4 py-2 ${
@@ -224,9 +309,7 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
           </button>
         </div>
 
-        {/* Scrollable Area */}
         <ScrollArea className="h-[400px] space-y-4 overflow-auto">
-          {/* Conteúdo das Abas */}
           {activeTab === "dados-basicos" && (
             <div className="space-y-4 p-5">
               <div className="grid grid-cols-4 items-center gap-4">
@@ -276,7 +359,7 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
                   CPF
                 </Label>
                 <IMaskInput
-                  mask="000.000.000-00" // Máscara para CPF
+                  mask="000.000.000-00"
                   id="cpf"
                   type="text"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -289,7 +372,7 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
                   RG
                 </Label>
                 <IMaskInput
-                  mask="000.000.000" // Máscara para RG
+                  mask="000.000.000"
                   id="rg"
                   type="text"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -302,7 +385,7 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
                   Telefone
                 </Label>
                 <IMaskInput
-                  mask="(00) 00000-0000" // Máscara para Telefone
+                  mask="(00) 00000-0000"
                   id="telefone"
                   type="text"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -448,28 +531,59 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
                   <select
                     id={`operadora-${index}`}
                     className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-96 rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={comissao.operadora}
+                    onChange={(e) =>
+                      handleComissaoChange(index, "operadora", e.target.value)
+                    }
                   >
-                    <option value=""></option>
-                    <option value="1">Operadora 1</option>
-                    <option value="2">Operadora 2</option>
-                    <option value="3">Operadora 3</option>
+                    <option value="">Selecione uma operadora</option>
+                    {operadoras.map((op) => (
+                      <option key={op.id} value={op.id}>
+                        {op.name}
+                      </option>
+                    ))}
                   </select>
+
                   <Label htmlFor={`a-vista-${index}`} className="text-right">
-                    À Vista
+                    À Vista (%)
                   </Label>
                   <Input
                     id={`a-vista-${index}`}
-                    type="number"
+                    type="text"
                     className="w-20 rounded-md border p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={formatPercentage(comissao.aVistaInput)}
+                    onKeyDown={(e) =>
+                      handlePercentageKeyDown(
+                        e,
+                        comissao.aVistaInput,
+                        (value) =>
+                          handleComissaoChange(index, "aVista", value, true),
+                      )
+                    }
+                    readOnly
+                    required
                   />
+
                   <Label htmlFor={`parcelado-${index}`} className="text-right">
-                    Parcelado
+                    Parcelado (%)
                   </Label>
                   <Input
                     id={`parcelado-${index}`}
-                    type="number"
+                    type="text"
                     className="w-20 rounded-md border p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={formatPercentage(comissao.parceladoInput)}
+                    onKeyDown={(e) =>
+                      handlePercentageKeyDown(
+                        e,
+                        comissao.parceladoInput,
+                        (value) =>
+                          handleComissaoChange(index, "parcelado", value, true),
+                      )
+                    }
+                    readOnly
+                    required
                   />
+
                   <Button
                     variant="outline"
                     size="icon"
@@ -499,11 +613,7 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
             disabled={isLoading}
             onClick={handleSubmit}
           >
-            {isLoading ? (
-              <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
-            ) : (
-              "Cadastrar vendedor"
-            )}
+            {isLoading ? <Loader className="h-4 w-4" /> : "Cadastrar vendedor"}
           </Button>
         </DialogFooter>
       </DialogContent>

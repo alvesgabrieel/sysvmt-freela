@@ -29,6 +29,14 @@ import { fetchCitiesByState, fetchStates } from "@/services/ibge"; // Importando
 import { EditSallerDialog } from "./components/edit-saller-dialog";
 import RegisterSallerDialog from "./components/register-saller-dialog";
 
+interface Commission {
+  id?: number;
+  tourOperatorId: number;
+  tourOperatorName: string;
+  upfrontCommission: number;
+  installmentCommission: number;
+}
+
 interface Saller {
   id: number;
   name: string;
@@ -45,6 +53,7 @@ interface Saller {
   adress: string;
   number: string;
   complement?: string;
+  commissions?: Commission[];
 }
 
 const Vendedores = () => {
@@ -149,6 +158,7 @@ const Vendedores = () => {
 
       if (response.ok) {
         const result = await response.json();
+        console.log("Dados brutos da API:", result); // Adicione para debug
 
         // Garante que todos os campos estejam presentes
         const sallersWithDefaults = result.sallers.map((saller: Saller) => ({
@@ -167,6 +177,7 @@ const Vendedores = () => {
           adress: saller.adress || "",
           number: saller.number || "",
           complement: saller.complement || "",
+          commissions: saller.commissions || [],
         }));
 
         setSallers(sallersWithDefaults);
