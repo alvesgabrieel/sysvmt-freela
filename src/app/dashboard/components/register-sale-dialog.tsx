@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { PaymentMethodType } from "@prisma/client";
+import { useEffect, useState } from "react";
 import { IMaskInput } from "react-imask";
 
 import { Button } from "@/components/ui/button";
@@ -12,37 +13,95 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area"; // Importando o ScrollArea
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface Saller {
+  id: number;
+  name: string;
+}
+
+interface TourOperator {
+  id: number;
+  name: string;
+}
+
+interface Client {
+  id: number;
+  name: string;
+}
+
+interface Cashback {
+  id: number;
+  name: string;
+}
+
+interface Companion {
+  id: number;
+  name: string;
+}
+
+interface Hosting {
+  id: number;
+  name: string;
+}
+
+interface Hospedagem {
+  hostingId: number;
+  name: string;
+  quartos: number;
+  valor: string;
+}
+
+interface Ticket {
+  id: number;
+  name: string;
+}
+
+interface Ingresso {
+  data: string;
+  ticketId: number; // Alterado de 'ingresso' para 'ticketId'
+  adulto: number;
+  crianca: number;
+  meia: number;
+  valoringresso: string;
+}
+interface FormData {
+  idInTourOperator: string;
+  sallerId: string;
+  tourOperatorId: string;
+  clientId: string;
+  paymentMethod: PaymentMethodType | "";
+  saleDate: string;
+  checkIn: string;
+  checkOut: string;
+  sallerCommission: string;
+  agencyCommission: string;
+  ticketDiscount: string;
+  hostingDiscount: string;
+  observation: string;
+  cashbackId: string;
+  canceledSale: boolean;
+  invoice: {
+    issuedInvoice: string;
+    estimatedIssueDate: string;
+    invoiceNumber: string;
+    invoiceDate: string;
+    expectedReceiptDate: string;
+    invoiceReceived: string;
+    receiptDate: string;
+  };
+}
 
 export default function RegisterSaleDialog() {
   const [activeTab, setActiveTab] = useState("gerais");
-
-  // Estado para armazenar a lista de acompanhantes selecionados
-  const [acompanhantes, setAcompanhantes] = useState<
-    { id: number; value: string }[]
-  >([{ id: Date.now(), value: "" }]);
-
-  // Estado para armazenar a lista de registros dde hospedagem
-  const [registrosHospedagem, setRegistrosHospedagem] = useState<
-    { hospedagem: string; quartos: number; valor: string }[]
-  >([]);
-  // Estado para armazenar os valores dos inputs da hospedagem
-  const [hospedagem, setHospedagem] = useState("");
+  const [acompanhantes, setAcompanhantes] = useState<Companion[]>([]);
+  const [registrosHospedagem, setRegistrosHospedagem] = useState<Hospedagem[]>(
+    [],
+  );
+  const [registrosIngresso, setRegistrosIngresso] = useState<Ingresso[]>([]);
+  const [hospedagemSelecionada, setHospedagemSelecionada] = useState("");
   const [quartos, setQuartos] = useState("");
   const [valor, setValor] = useState("");
-
-  // Estado para armazenar a lista de registros de ingressos
-  const [registrosIngresso, setRegistrosIngresso] = useState<
-    {
-      data: string;
-      ingresso: string;
-      adulto: number;
-      crianca: number;
-      meia: number;
-      valoringresso: string;
-    }[]
-  >([]);
-  // Estado para armazenar os valores dos inputs de ingresso
   const [data, setData] = useState("");
   const [ingresso, setIngresso] = useState("");
   const [adulto, setAdulto] = useState("");
@@ -50,38 +109,306 @@ export default function RegisterSaleDialog() {
   const [meia, setMeia] = useState("");
   const [valoringresso, setValoringresso] = useState("");
 
-  const TODOS_ACOMPANHANTES = [
-    { id: "1", nome: "João Silva" },
-    { id: "2", nome: "Maria Souza" },
-    { id: "3", nome: "Pedro Costa" },
-  ];
+  const [sallers, setSallers] = useState<Saller[]>([]);
+  const [loadingSallers, setLoadingSallers] = useState(true);
 
-  // Na função adicionarRegistroHospedagem:
+  const [tourOperators, setTourOperators] = useState<TourOperator[]>([]);
+  const [loadingTourOperators, setLoadingTourOperators] = useState(true);
+
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loadingClients, setLoadingClients] = useState(true);
+
+  const [cashbacks, setCashbacks] = useState<Cashback[]>([]);
+  const [loadingCashbacks, setLoadingCashbacks] = useState(true);
+
+  const [allCompanions, setAllCompanions] = useState<Companion[]>([]);
+  const [loadingCompanions, setLoadingCompanions] = useState(true);
+
+  const [allHostings, setAllHostings] = useState<Hosting[]>([]);
+  const [loadingHostings, setLoadingHostings] = useState(true);
+
+  const [allTickets, setAllTickets] = useState<Ticket[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
+
+  const [formData, setFormData] = useState<FormData>({
+    idInTourOperator: "",
+    sallerId: "",
+    tourOperatorId: "",
+    clientId: "",
+    paymentMethod: "",
+    saleDate: "",
+    checkIn: "",
+    checkOut: "",
+    sallerCommission: "",
+    agencyCommission: "",
+    ticketDiscount: "0",
+    hostingDiscount: "0",
+    observation: "",
+    cashbackId: "",
+    canceledSale: false,
+    invoice: {
+      issuedInvoice: "",
+      estimatedIssueDate: "",
+      invoiceNumber: "",
+      invoiceDate: "",
+      expectedReceiptDate: "",
+      invoiceReceived: "",
+      receiptDate: "",
+    },
+  });
+
+  useEffect(() => {
+    fetchSallers();
+    fetchTourOperator();
+    fetchClients();
+    fetchCashbacks();
+    fetchCompanions();
+    fetchHostings();
+    fetchTickets();
+  }, []);
+
+  const fetchSallers = async () => {
+    try {
+      setLoadingSallers(true);
+      const response = await fetch("/api/saller/list");
+      if (!response.ok) {
+        throw new Error("Erro ao carregar vendedores");
+      }
+      const data = await response.json();
+      setSallers(data);
+    } catch (error) {
+      console.error("Erro ao carregar vendedores:", error);
+    } finally {
+      setLoadingSallers(false);
+    }
+  };
+
+  const fetchTourOperator = async () => {
+    try {
+      setLoadingTourOperators(true);
+      const response = await fetch("/api/touroperator/list");
+      if (!response.ok) {
+        throw new Error("Erro ao carregar operadoras");
+      }
+      const data = await response.json();
+      setTourOperators(data);
+    } catch (error) {
+      console.error("Erro ao carregar operadoras:", error);
+    } finally {
+      setLoadingTourOperators(false);
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      setLoadingClients(true);
+      const response = await fetch("/api/client/list");
+      if (!response.ok) {
+        throw new Error("Erro ao carregar clientes");
+      }
+      const data = await response.json();
+      setClients(data);
+    } catch (error) {
+      console.error("Erro ao carregar clientes:", error);
+    } finally {
+      setLoadingClients(false);
+    }
+  };
+
+  const fetchCashbacks = async () => {
+    try {
+      setLoadingCashbacks(true);
+      const response = await fetch("/api/cashback/list");
+      if (!response.ok) {
+        throw new Error("Erro ao carregar cashbacks");
+      }
+      const data = await response.json();
+      setCashbacks(data);
+    } catch (error) {
+      console.error("Erro ao carregar cashbacks:", error);
+    } finally {
+      setLoadingCashbacks(false);
+    }
+  };
+
+  const fetchCompanions = async () => {
+    try {
+      setLoadingCompanions(true);
+      const response = await fetch("/api/companion/list");
+      if (!response.ok) {
+        throw new Error("Erro ao carregar acompanhantes");
+      }
+      const data = await response.json();
+      setAllCompanions(data);
+      // Inicializa com um acompanhante vazio
+      setAcompanhantes([{ id: 0, name: "" }]);
+    } catch (error) {
+      console.error("Erro ao carregar acompanhantes:", error);
+    } finally {
+      setLoadingCompanions(false);
+    }
+  };
+
+  const fetchHostings = async () => {
+    try {
+      setLoadingHostings(true);
+      const response = await fetch("/api/hosting/list");
+      if (!response.ok) {
+        throw new Error("Erro ao carregar hospedagens");
+      }
+      const data = await response.json();
+      setAllHostings(data);
+    } catch (error) {
+      console.error("Erro ao carregar hospedagens:", error);
+    } finally {
+      setLoadingHostings(false);
+    }
+  };
+
+  const fetchTickets = async () => {
+    try {
+      setLoadingTickets(true);
+      const response = await fetch("/api/ticket/list");
+      if (!response.ok) {
+        throw new Error("Erro ao carregar ingressos");
+      }
+      const data = await response.json();
+      setAllTickets(data);
+    } catch (error) {
+      console.error("Erro ao carregar ingressos:", error);
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  const adicionarAcompanhante = () => {
+    const opcoesDisponiveis = getOpcoesDisponiveis(acompanhantes.length);
+    if (opcoesDisponiveis.length > 0) {
+      setAcompanhantes([...acompanhantes, { id: 0, name: "" }]);
+    }
+  };
+
+  const removerAcompanhante = (index: number) => {
+    if (acompanhantes.length > 1) {
+      setAcompanhantes(acompanhantes.filter((_, i) => i !== index));
+    }
+  };
+
+  const atualizarAcompanhante = (index: number, companionId: string) => {
+    const selectedCompanion = allCompanions.find(
+      (c) => c.id.toString() === companionId,
+    );
+    if (selectedCompanion) {
+      const novosAcompanhantes = [...acompanhantes];
+      novosAcompanhantes[index] = selectedCompanion;
+      setAcompanhantes(novosAcompanhantes);
+    }
+  };
+
+  const getOpcoesDisponiveis = (currentIndex: number) => {
+    const idsSelecionados = acompanhantes
+      .filter((_, index) => index !== currentIndex)
+      .map((c) => c.id);
+
+    return allCompanions.filter((opcao) => !idsSelecionados.includes(opcao.id));
+  };
+
+  const handleInputChange = (
+    field: keyof FormData,
+    value: string | boolean,
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleInvoiceChange = (
+    field: keyof FormData["invoice"],
+    value: string,
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      invoice: {
+        ...prev.invoice,
+        [field]: value,
+      },
+    }));
+  };
+
+  const formatCurrencyForAPI = (value: string): string => {
+    // Remove tudo que não for dígito ou vírgula
+    const cleaned = value.replace(/[^\d,]/g, "");
+
+    // Converte para número (substitui vírgula por ponto para o parseFloat)
+    const numberValue = parseFloat(cleaned.replace(",", "."));
+
+    // Formata para o padrão brasileiro (com 2 decimais, vírgula e ponto)
+    return numberValue.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const formatDate = (dateString: string) => {
+    // Remove qualquer caractere não numérico
+    const cleaned = dateString.replace(/\D/g, "");
+
+    // Verifica se tem pelo menos 8 dígitos (ddmmyyyy)
+    if (cleaned.length >= 8) {
+      return `${cleaned.substring(0, 2)}/${cleaned.substring(2, 4)}/${cleaned.substring(4, 8)}`;
+    }
+
+    // Retorna a string original se não puder ser formatada
+    return dateString;
+  };
+
+  // Modifique a função handleCurrencyChange para lidar melhor com a entrada
+  const handleCurrencyChange = (field: keyof FormData, value: string) => {
+    // Permite números, vírgula e backspace
+    const cleaned = value.replace(/[^\d,]/g, "");
+
+    setFormData((prev) => ({
+      ...prev,
+      [field]: cleaned,
+    }));
+  };
+
   const adicionarRegistroHospedagem = () => {
     const valorNumerico = parseFloat(valor);
     const quartosNumerico = parseFloat(quartos);
-    if (hospedagem && quartosNumerico > 0 && valorNumerico > 0) {
+    const hospedagemSelecionadaObj = allHostings.find(
+      (h) => h.id.toString() === hospedagemSelecionada,
+    );
+
+    if (hospedagemSelecionadaObj && quartosNumerico > 0 && valorNumerico > 0) {
       setRegistrosHospedagem([
         ...registrosHospedagem,
-        { hospedagem, quartos: quartosNumerico, valor },
+        {
+          hostingId: hospedagemSelecionadaObj.id,
+          name: hospedagemSelecionadaObj.name,
+          quartos: quartosNumerico,
+          valor: valor.replace(".", ","), // Garante vírgula como separador decimal
+        },
       ]);
-      setHospedagem("");
+      setHospedagemSelecionada("");
       setQuartos("");
       setValor("");
     }
+  };
+  const removerRegistroHospedagem = (index: number) => {
+    setRegistrosHospedagem(registrosHospedagem.filter((_, i) => i !== index));
   };
 
   const handleNumberChange =
     (setter: React.Dispatch<React.SetStateAction<string>>) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
-      // Permite apenas números ou string vazia
       if (value === "" || /^[0-9]*$/.test(value)) {
         setter(value);
       }
     };
 
-  // Na função adicionarRegistroIngresso:
   const adicionarRegistroIngresso = () => {
     const valorNumerico = parseFloat(valoringresso);
     const adultoNumerico = parseFloat(adulto);
@@ -100,11 +427,11 @@ export default function RegisterSaleDialog() {
         ...registrosIngresso,
         {
           data,
-          ingresso,
+          ticketId: Number(ingresso), // Alterado para ticketId
           adulto: adultoNumerico,
           crianca: criancaNumerico,
           meia: meiaNumerica,
-          valoringresso,
+          valoringresso: valoringresso.replace(".", ","), // Garante vírgula
         },
       ]);
       setData("");
@@ -116,79 +443,115 @@ export default function RegisterSaleDialog() {
     }
   };
 
-  // Função para adicionar um novo select de acompanhante
-  // Adiciona novo campo de acompanhante (se houver opções disponíveis)
-  const adicionarAcompanhante = () => {
-    const opcoesDisponiveis = getOpcoesDisponiveis("");
-    if (opcoesDisponiveis.length > 0) {
-      setAcompanhantes([...acompanhantes, { id: Date.now(), value: "" }]);
-    }
-  };
-
-  // Função para remover um acompanhante
-  const removerAcompanhante = (id: number) => {
-    if (acompanhantes.length > 1) {
-      setAcompanhantes(acompanhantes.filter((a) => a.id !== id));
-    }
-  };
-
-  // Função para atualizar o valor de um acompanhante
-  const atualizarAcompanhante = (id: number, value: string) => {
-    setAcompanhantes(
-      acompanhantes.map((a) => (a.id === id ? { ...a, value } : a)),
-    );
-  };
-  // Função para filtrar opções disponíveis
-  // Filtra as opções disponíveis para um select específico
-  const getOpcoesDisponiveis = (valorAtual: string) => {
-    const idsSelecionados = acompanhantes.map((a) => a.value);
-    return TODOS_ACOMPANHANTES.filter(
-      (opcao) => !idsSelecionados.includes(opcao.id) || opcao.id === valorAtual,
-    );
-  };
-
-  // const renderAcompanhante = (
-  //   acompanhante: { id: number; value: string },
-  //   index: number,
-  // ) => (
-  //   <div key={acompanhante.id} className="grid grid-cols-4 items-center gap-4">
-  //     <Label className="text-right">
-  //       {index === 0 ? "Acompanhante" : `Acompanhante ${index + 1}`}
-  //     </Label>
-  //     <div className="col-span-3 flex items-center gap-2">
-  //       <select
-  //         value={acompanhante.value}
-  //         onChange={(e) =>
-  //           atualizarAcompanhante(acompanhante.id, e.target.value)
-  //         }
-  //         className="..."
-  //       >
-  //         <option value="">Selecione...</option>
-  //         {getOpcoesDisponiveis(acompanhante.value).map((opcao) => (
-  //           <option key={opcao.id} value={opcao.id}>
-  //             {opcao.nome}
-  //           </option>
-  //         ))}
-  //       </select>
-
-  //       {index < acompanhantes.length - 1 ? (
-  //         <button onClick={() => removerAcompanhante(acompanhante.id)}>
-  //           -
-  //         </button>
-  //       ) : (
-  //         <button
-  //           onClick={adicionarAcompanhante}
-  //           disabled={getOpcoesDisponiveis("").length === 0}
-  //         >
-  //           +
-  //         </button>
-  //       )}
-  //     </div>
-  //   </div>
-  // );
-
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+  };
+
+  const handleSubmit = async () => {
+    try {
+      if (
+        !formData.idInTourOperator ||
+        !formData.sallerId ||
+        !formData.tourOperatorId ||
+        !formData.clientId ||
+        !formData.paymentMethod ||
+        !formData.saleDate ||
+        !formData.checkIn ||
+        !formData.checkOut ||
+        !formData.invoice.issuedInvoice ||
+        !formData.invoice.invoiceReceived
+      ) {
+        alert("Preencha todos os campos obrigatórios!");
+        return;
+      }
+
+      // Função para formatar a data com barras
+      const formatDateWithSlashes = (dateStr: string) => {
+        // Se já tiver barras, mantém
+        if (dateStr.includes("/")) return dateStr;
+        // Se for 8 dígitos, adiciona barras
+        if (dateStr.length === 8) {
+          return `${dateStr.substring(0, 2)}/${dateStr.substring(2, 4)}/${dateStr.substring(4)}`;
+        }
+        return dateStr; // Retorna original se não puder formatar
+      };
+
+      const requestData = {
+        idInTourOperator: Number(formData.idInTourOperator),
+        sallerId: Number(formData.sallerId),
+        tourOperatorId: Number(formData.tourOperatorId),
+        clientId: Number(formData.clientId),
+        paymentMethod: formData.paymentMethod as PaymentMethodType,
+        saleDate: formatDateWithSlashes(formData.saleDate),
+        checkIn: formatDateWithSlashes(formData.checkIn),
+        checkOut: formatDateWithSlashes(formData.checkOut),
+        sallerCommission: formData.sallerCommission,
+        agencyCommission: formData.agencyCommission,
+        ticketDiscount: formData.ticketDiscount,
+        hostingDiscount: formData.hostingDiscount,
+        observation: formData.observation,
+        cashbackId: formData.cashbackId ? Number(formData.cashbackId) : null,
+        companions: acompanhantes
+          .filter((a) => a.id > 0) // Filtra apenas os acompanhantes selecionados
+          .map((a) => ({ companionId: a.id })),
+        hostings: registrosHospedagem.map((h) => ({
+          hostingId: h.hostingId, // Já é number, não precisa do Number()
+          rooms: h.quartos,
+          price: formatCurrencyForAPI(h.valor),
+        })),
+        tickets: registrosIngresso.map((i) => ({
+          ticketId: i.ticketId,
+          date: formatDateWithSlashes(i.data),
+          adults: i.adulto,
+          kids: i.crianca,
+          halfPriceTicket: i.meia,
+          price: formatCurrencyForAPI(i.valoringresso),
+        })),
+        invoice: {
+          issuedInvoice: formData.invoice.issuedInvoice,
+          estimatedIssueDate: formatDateWithSlashes(
+            formData.invoice.estimatedIssueDate,
+          ),
+          invoiceNumber: formData.invoice.invoiceNumber,
+          invoiceDate: formatDateWithSlashes(formData.invoice.invoiceDate),
+          expectedReceiptDate: formatDateWithSlashes(
+            formData.invoice.expectedReceiptDate,
+          ),
+          invoiceReceived: formData.invoice.invoiceReceived,
+          receiptDate: formatDateWithSlashes(formData.invoice.receiptDate),
+        },
+      };
+
+      // LOG PRINCIPAL - Mostra todos os dados que serão enviados
+      console.log(
+        "Dados que serão enviados para a API:",
+        JSON.stringify(requestData, null, 2),
+      );
+
+      // LOG DETALHADO - Para verificar partes específicas
+      console.log("Dados de hospedagem:", requestData.hostings);
+      console.log("Dados de ingressos:", requestData.tickets);
+      console.log("Dados da nota fiscal:", requestData.invoice);
+
+      const response = await fetch("/api/sale/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao cadastrar venda");
+      }
+
+      const result = await response.json();
+      console.log("Venda cadastrada com sucesso:", result);
+      alert("Venda cadastrada com sucesso!");
+    } catch (error) {
+      console.error("Erro:", error);
+      alert("Erro ao cadastrar venda. Verifique os dados e tente novamente.");
+    }
   };
 
   return (
@@ -201,7 +564,6 @@ export default function RegisterSaleDialog() {
           <DialogTitle>Cadastrar venda</DialogTitle>
         </DialogHeader>
 
-        {/* Abas para Navegação */}
         <div className="mb-6 mt-4 flex space-x-4">
           <button
             className={`px-4 py-2 ${
@@ -253,18 +615,23 @@ export default function RegisterSaleDialog() {
           </button>
         </div>
 
-        {/* Scrollable Area */}
         <ScrollArea className="h-[400px] space-y-4 overflow-auto">
-          {/* Conteúdo das Abas */}
-          {/* Gerais */}
           {activeTab === "gerais" && (
             <div className="space-y-4 p-5">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="cliente" className="text-right">
                   Id na Operadora
                 </Label>
-                <Input id="cliente" className="col-span-3" />
+                <Input
+                  id="cliente"
+                  className="col-span-3"
+                  value={formData.idInTourOperator}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    handleInputChange("idInTourOperator", e.target.value)
+                  }
+                />
               </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="vendedor" className="text-right">
                   Vendedor
@@ -272,13 +639,23 @@ export default function RegisterSaleDialog() {
                 <select
                   id="vendedor"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.sallerId}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    handleInputChange("sallerId", e.target.value)
+                  }
+                  disabled={loadingSallers}
                 >
-                  <option value=""></option>
-                  <option value="1">João Silva</option>
-                  <option value="2">Maria Souza</option>
-                  <option value="3">Pedro Costa</option>
+                  <option value="">
+                    {loadingSallers ? "Carregando..." : " "}
+                  </option>
+                  {sallers.map((seller) => (
+                    <option key={seller.id} value={seller.id}>
+                      {seller.name}
+                    </option>
+                  ))}
                 </select>
               </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="pagamento" className="text-right">
                   Forma de pagamento
@@ -286,11 +663,19 @@ export default function RegisterSaleDialog() {
                 <select
                   id="pagamento"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.paymentMethod}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    handleInputChange(
+                      "paymentMethod",
+                      e.target.value as PaymentMethodType,
+                    )
+                  }
                 >
                   <option value=""></option>
-                  <option value="1">Pix</option>
-                  <option value="2">Dinheiro</option>
-                  <option value="3">Debito</option>
+                  <option value="PIX">Pix</option>
+                  <option value="DINHEIRO">Dinheiro</option>
+                  <option value="DEBITO">Débito</option>
+                  <option value="CREDITO">Crédito</option>
                 </select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -300,11 +685,20 @@ export default function RegisterSaleDialog() {
                 <select
                   id="operadora"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.tourOperatorId}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    handleInputChange("tourOperatorId", e.target.value)
+                  }
+                  disabled={loadingTourOperators}
                 >
-                  <option value=""></option>
-                  <option value="1">Operadora 1</option>
-                  <option value="2">Operadora 2</option>
-                  <option value="3">Operadora 3</option>
+                  <option value="">
+                    {loadingTourOperators ? "Carregando..." : " "}
+                  </option>
+                  {tourOperators.map((tourOperator) => (
+                    <option key={tourOperator.id} value={tourOperator.id}>
+                      {tourOperator.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -313,17 +707,27 @@ export default function RegisterSaleDialog() {
                 </Label>
                 <Input
                   id="comissao-vendedor"
-                  type="number"
+                  value={formData.sallerCommission}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    // Permite apenas números e vírgula
+                    const value = e.target.value.replace(/[^\d,]/g, "");
+                    handleCurrencyChange("sallerCommission", value);
+                  }}
                   className="col-span-3"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="comissa-agencia" className="text-right">
-                  Comissão do vendedor
+                  Comissão da agência
                 </Label>
                 <Input
-                  id="comissa-agencia"
-                  type="number"
+                  id="comissao-agencia"
+                  value={formData.agencyCommission}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    // Permite apenas números e vírgula
+                    const value = e.target.value.replace(/[^\d,]/g, "");
+                    handleCurrencyChange("agencyCommission", value);
+                  }}
                   className="col-span-3"
                 />
               </div>
@@ -333,8 +737,11 @@ export default function RegisterSaleDialog() {
                 <IMaskInput
                   mask="00/00/0000"
                   overwrite
-                  unmask
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.saleDate}
+                  onAccept={(value) =>
+                    handleInputChange("saleDate", value as string)
+                  }
                 />
               </div>
 
@@ -343,8 +750,11 @@ export default function RegisterSaleDialog() {
                 <IMaskInput
                   mask="00/00/0000"
                   overwrite
-                  unmask
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.checkIn}
+                  onAccept={(value) =>
+                    handleInputChange("checkIn", value as string)
+                  }
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -352,8 +762,11 @@ export default function RegisterSaleDialog() {
                 <IMaskInput
                   mask="00/00/0000"
                   overwrite
-                  unmask
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.checkOut}
+                  onAccept={(value) =>
+                    handleInputChange("checkOut", value as string)
+                  }
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -363,11 +776,20 @@ export default function RegisterSaleDialog() {
                 <select
                   id="cliente"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.clientId}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    handleInputChange("clientId", e.target.value)
+                  }
+                  disabled={loadingClients}
                 >
-                  <option value=""></option>
-                  <option value="1">João Maria</option>
-                  <option value="2">Pedro Alves</option>
-                  <option value="3">Camila Silva</option>
+                  <option value="">
+                    {loadingClients ? "Carregando..." : " "}
+                  </option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -376,7 +798,12 @@ export default function RegisterSaleDialog() {
                 </Label>
                 <Input
                   id="desconto-ingresso"
-                  type="number"
+                  value={formData.ticketDiscount}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    // Permite apenas números e vírgula
+                    const value = e.target.value.replace(/[^\d,]/g, "");
+                    handleCurrencyChange("ticketDiscount", value);
+                  }}
                   className="col-span-3"
                 />
               </div>
@@ -386,7 +813,12 @@ export default function RegisterSaleDialog() {
                 </Label>
                 <Input
                   id="desconto-hospedagem"
-                  type="number"
+                  value={formData.hostingDiscount}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    // Permite apenas números e vírgula
+                    const value = e.target.value.replace(/[^\d,]/g, "");
+                    handleCurrencyChange("hostingDiscount", value);
+                  }}
                   className="col-span-3"
                 />
               </div>
@@ -397,11 +829,20 @@ export default function RegisterSaleDialog() {
                 <select
                   id="cashback"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.cashbackId}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    handleInputChange("cashbackId", e.target.value)
+                  }
+                  disabled={loadingCashbacks}
                 >
-                  <option value=""></option>
-                  <option value="1">Cashback 1</option>
-                  <option value="2">Cashback 2</option>
-                  <option value="3">Cashback 3</option>
+                  <option value="">
+                    {loadingCashbacks ? "Carregando..." : " "}
+                  </option>
+                  {cashbacks.map((cashback) => (
+                    <option key={cashback.id} value={cashback.id}>
+                      {cashback.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="grid grid-cols-4 gap-4">
@@ -415,28 +856,34 @@ export default function RegisterSaleDialog() {
                   id="observacao"
                   className="col-span-3 rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={4}
+                  value={formData.observation}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    handleInputChange("observation", e.target.value)
+                  }
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Venda cancelada</Label>
                 <div className="col-span-3 flex items-center gap-4">
-                  {/* Radio Sim */}
                   <label className="flex cursor-pointer items-center gap-2">
                     <input
                       type="radio"
                       name="vendaCancelada"
                       value="sim"
+                      checked={formData.canceledSale}
+                      onChange={() => handleInputChange("canceledSale", true)}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="text-sm">Sim</span>
                   </label>
 
-                  {/* Radio Não */}
                   <label className="flex cursor-pointer items-center gap-2">
                     <input
                       type="radio"
                       name="vendaCancelada"
                       value="nao"
+                      checked={!formData.canceledSale}
+                      onChange={() => handleInputChange("canceledSale", false)}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="text-sm">Não</span>
@@ -446,43 +893,45 @@ export default function RegisterSaleDialog() {
             </div>
           )}
 
-          {/* Acompanhantes - Modificado */}
           {activeTab === "acompanhantes" && (
             <div className="space-y-4 p-5">
               {acompanhantes.map((acompanhante, index) => (
                 <div
-                  key={acompanhante.id}
+                  key={index}
                   className="grid grid-cols-4 items-center gap-4"
                 >
                   <Label
-                    htmlFor={`acompanhante-${acompanhante.id}`}
+                    htmlFor={`acompanhante-${index}`}
                     className="text-right"
                   >
                     {index === 0 ? "Acompanhante" : `Acompanhante ${index + 1}`}
                   </Label>
                   <div className="col-span-3 flex items-center gap-2">
-                    {/* Select com estilização original */}
                     <select
-                      id={`acompanhante-${acompanhante.id}`}
-                      value={acompanhante.value}
+                      id={`acompanhante-${index}`}
+                      value={acompanhante.id || ""}
                       onChange={(e) =>
-                        atualizarAcompanhante(acompanhante.id, e.target.value)
+                        atualizarAcompanhante(index, e.target.value)
                       }
                       className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={loadingCompanions}
                     >
-                      <option value="">Selecione um acompanhante</option>
-                      {getOpcoesDisponiveis(acompanhante.value).map((opcao) => (
+                      <option value="">
+                        {loadingCompanions
+                          ? "Carregando..."
+                          : "Selecione um acompanhante"}
+                      </option>
+                      {getOpcoesDisponiveis(index).map((opcao) => (
                         <option key={opcao.id} value={opcao.id}>
-                          {opcao.nome}
+                          {opcao.name}
                         </option>
                       ))}
                     </select>
 
-                    {/* Botões com estilização original */}
                     {index < acompanhantes.length - 1 ? (
                       <button
                         type="button"
-                        onClick={() => removerAcompanhante(acompanhante.id)}
+                        onClick={() => removerAcompanhante(index)}
                         className="rounded-md bg-red-500 p-2 text-white hover:bg-red-600"
                       >
                         -
@@ -491,7 +940,10 @@ export default function RegisterSaleDialog() {
                       <button
                         type="button"
                         onClick={adicionarAcompanhante}
-                        disabled={getOpcoesDisponiveis("").length === 0}
+                        disabled={
+                          loadingCompanions ||
+                          getOpcoesDisponiveis(index).length === 0
+                        }
                         className="rounded-md bg-blue-500 p-2 text-white hover:bg-blue-600 disabled:bg-gray-400 disabled:hover:bg-gray-400"
                       >
                         +
@@ -503,24 +955,29 @@ export default function RegisterSaleDialog() {
             </div>
           )}
 
-          {/* Hospedagem */}
           {activeTab === "hospedagem" && (
             <div className="space-y-4 p-5">
-              {/* Inputs */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="hospedagem" className="text-right">
                   Hospedagem
                 </Label>
                 <select
                   id="hospedagem"
-                  value={hospedagem}
-                  onChange={(e) => setHospedagem(e.target.value)}
+                  value={hospedagemSelecionada}
+                  onChange={(e) => setHospedagemSelecionada(e.target.value)}
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={loadingHostings}
                 >
-                  <option value=""></option>
-                  <option value="Hotel A">Hotel A</option>
-                  <option value="Hotel B">Hotel B</option>
-                  <option value="Hotel C">Hotel C</option>
+                  <option value="">
+                    {loadingHostings
+                      ? "Carregando..."
+                      : "Selecione uma hospedagem"}
+                  </option>
+                  {allHostings.map((hospedagem) => (
+                    <option key={hospedagem.id} value={hospedagem.id}>
+                      {hospedagem.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -528,14 +985,13 @@ export default function RegisterSaleDialog() {
                 <Label htmlFor="quartos" className="text-right">
                   Quartos
                 </Label>
-                {/* Quartos */}
                 <Input
                   id="quartos"
                   type="number"
                   value={quartos}
                   onChange={handleNumberChange(setQuartos)}
                   className="col-span-3"
-                  min="0"
+                  min="1"
                 />
               </div>
 
@@ -548,7 +1004,6 @@ export default function RegisterSaleDialog() {
                   type="text"
                   value={valor}
                   onChange={(e) => {
-                    // Permite apenas números e ponto decimal
                     const valorDigitado = e.target.value.replace(
                       /[^0-9.]/g,
                       "",
@@ -556,33 +1011,36 @@ export default function RegisterSaleDialog() {
                     setValor(valorDigitado);
                   }}
                   className="col-span-3"
-                  min="0"
                 />
               </div>
 
-              {/* Botão Adicionar */}
               <div className="flex justify-end">
                 <button
                   onClick={adicionarRegistroHospedagem}
-                  className="rounded-md bg-blue-500 p-2 text-white hover:bg-blue-600"
+                  disabled={!hospedagemSelecionada || !quartos || !valor}
+                  className="rounded-md bg-blue-500 p-2 text-white hover:bg-blue-600 disabled:bg-gray-400 disabled:hover:bg-gray-400"
                 >
                   Adicionar
                 </button>
               </div>
 
-              {/* Lista de Registros */}
               <div className="space-y-2">
                 {registrosHospedagem.map((registro, index) => (
-                  <div key={index} className="rounded-md border p-4">
+                  <div key={index} className="relative rounded-md border p-4">
+                    <button
+                      onClick={() => removerRegistroHospedagem(index)}
+                      className="absolute right-2 top-2 text-red-500 hover:text-red-700"
+                    >
+                      ×
+                    </button>
                     <p>
-                      <strong>Hospedagem:</strong> {registro.hospedagem}
+                      <strong>Hospedagem:</strong> {registro.name}
                     </p>
                     <p>
                       <strong>Quartos:</strong> {registro.quartos}
                     </p>
                     <p>
-                      <strong>Valor:</strong> R${" "}
-                      {parseFloat(registro.valor).toFixed(2)}
+                      <strong>Valor:</strong> R$ {registro.valor}
                     </p>
                   </div>
                 ))}
@@ -590,17 +1048,18 @@ export default function RegisterSaleDialog() {
             </div>
           )}
 
-          {/* Ingresso */}
           {activeTab === "ingresso" && (
             <div className="space-y-4 p-5">
-              {/* Inputs */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Data</Label>
                 <IMaskInput
                   mask="00/00/0000"
                   overwrite
-                  unmask
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.saleDate}
+                  onAccept={(value) =>
+                    handleInputChange("saleDate", value as string)
+                  }
                 />
               </div>
 
@@ -611,13 +1070,20 @@ export default function RegisterSaleDialog() {
                 <select
                   id="ingresso"
                   value={ingresso}
-                  onChange={(e) => setIngresso(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setIngresso(e.target.value)
+                  }
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={loadingTickets}
                 >
-                  <option value=""></option>
-                  <option value="Ingresso A">Ingresso A</option>
-                  <option value="Ingresso B">Ingresso B</option>
-                  <option value="Ingresso C">Ingresso C</option>
+                  <option value="">
+                    {loadingTickets ? "Carregando..." : "Selecione um ingresso"}
+                  </option>
+                  {allTickets.map((ticket) => (
+                    <option key={ticket.id} value={ticket.id}>
+                      {ticket.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -669,10 +1135,9 @@ export default function RegisterSaleDialog() {
                 </Label>
                 <Input
                   id="valor"
-                  type="number"
+                  type="text"
                   value={valoringresso}
-                  onChange={(e) => {
-                    // Permite apenas números e ponto decimal
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const valorDigitado = e.target.value.replace(
                       /[^0-9.]/g,
                       "",
@@ -684,7 +1149,6 @@ export default function RegisterSaleDialog() {
                 />
               </div>
 
-              {/* Botão Adicionar */}
               <div className="flex justify-end">
                 <button
                   onClick={adicionarRegistroIngresso}
@@ -694,38 +1158,42 @@ export default function RegisterSaleDialog() {
                 </button>
               </div>
 
-              {/* Lista de Registros */}
               <div className="space-y-2">
-                {registrosIngresso.map((registro, index) => (
-                  <div key={index} className="rounded-md border p-4">
-                    <p>
-                      <strong>Data:</strong> {registro.data}
-                    </p>
-                    <p>
-                      <strong>Ingresso:</strong> {registro.ingresso}
-                    </p>
-                    <p>
-                      <strong>Adulto:</strong> {registro.adulto}
-                    </p>
-                    <p>
-                      <strong>Criança:</strong> {registro.crianca}
-                    </p>
-                    <p>
-                      <strong>Meia:</strong> {registro.meia}
-                    </p>
-                    <p>
-                      <strong>Valor:</strong> R${" "}
-                      {parseFloat(registro.valoringresso).toFixed(2)}
-                    </p>
-                  </div>
-                ))}
+                {registrosIngresso.map((registro, index) => {
+                  const ticket = allTickets.find(
+                    (t) => t.id === registro.ticketId,
+                  );
+                  return (
+                    <div key={index} className="rounded-md border p-4">
+                      <p>
+                        <strong>Data:</strong> {formatDate(registro.data)}
+                      </p>
+                      <p>
+                        <strong>Ingresso:</strong>{" "}
+                        {ticket?.name || "Ingresso não encontrado"}
+                      </p>
+                      <p>
+                        <strong>Adulto:</strong> {registro.adulto}
+                      </p>
+                      <p>
+                        <strong>Criança:</strong> {registro.crianca}
+                      </p>
+                      <p>
+                        <strong>Meia:</strong> {registro.meia}
+                      </p>
+                      <p>
+                        <strong>Valor:</strong> R${" "}
+                        {parseFloat(registro.valoringresso).toFixed(2)}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
           {activeTab === "nt-fiscal" && (
             <div className="space-y-4 p-5">
-              {/* Inputs */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="nt-fiscal-emitida" className="text-right">
                   NF emitida?
@@ -733,11 +1201,15 @@ export default function RegisterSaleDialog() {
                 <select
                   id="nt-fiscal-emitida"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.invoice.issuedInvoice}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    handleInvoiceChange("issuedInvoice", e.target.value)
+                  }
                 >
                   <option value=""></option>
-                  <option value="sim">Sim</option>
-                  <option value="nao">Não</option>
-                  <option value="sem_emissao">Sem Emissão</option>
+                  <option value="EMITIDA">Sim</option>
+                  <option value="NAO_EMITIDA">Não</option>
+                  <option value="PENDENTE">Pendente</option>
                 </select>
               </div>
 
@@ -746,8 +1218,11 @@ export default function RegisterSaleDialog() {
                 <IMaskInput
                   mask="00/00/0000"
                   overwrite
-                  unmask
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.invoice.estimatedIssueDate}
+                  onAccept={(value) =>
+                    handleInvoiceChange("estimatedIssueDate", value as string)
+                  }
                 />
               </div>
 
@@ -755,7 +1230,14 @@ export default function RegisterSaleDialog() {
                 <Label htmlFor="numero-nf" className="text-right">
                   Número da NF:
                 </Label>
-                <Input id="numero-nf" type="number" className="col-span-3" />
+                <Input
+                  id="numero-nf"
+                  className="col-span-3"
+                  value={formData.invoice.invoiceNumber}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    handleInvoiceChange("invoiceNumber", e.target.value)
+                  }
+                />
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
@@ -763,8 +1245,11 @@ export default function RegisterSaleDialog() {
                 <IMaskInput
                   mask="00/00/0000"
                   overwrite
-                  unmask
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.invoice.invoiceDate}
+                  onAccept={(value) =>
+                    handleInvoiceChange("invoiceDate", value as string)
+                  }
                 />
               </div>
 
@@ -775,32 +1260,43 @@ export default function RegisterSaleDialog() {
                 <IMaskInput
                   mask="00/00/0000"
                   overwrite
-                  unmask
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.invoice.expectedReceiptDate}
+                  onAccept={(value) =>
+                    handleInvoiceChange("expectedReceiptDate", value as string)
+                  }
                 />
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="nt-fiscal-recebida" className="text-right">
-                  NF Rececbida?
+                  NF Recebida?
                 </Label>
                 <select
                   id="nt-fiscal-recebida"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.invoice.invoiceReceived}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    handleInvoiceChange("invoiceReceived", e.target.value)
+                  }
                 >
                   <option value=""></option>
-                  <option value="sim">Sim</option>
-                  <option value="nao">Não</option>
+                  <option value="RECEBIDA">Sim</option>
+                  <option value="NAO_RECEBIDA">Não</option>
+                  <option value="PENDENTE">Pendente</option>
                 </select>
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className=" text-right">Data de recebimento</Label>
+                <Label className="text-right">Data de recebimento</Label>
                 <IMaskInput
                   mask="00/00/0000"
                   overwrite
-                  unmask
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.invoice.receiptDate}
+                  onAccept={(value) =>
+                    handleInvoiceChange("receiptDate", value as string)
+                  }
                 />
               </div>
             </div>
@@ -808,7 +1304,7 @@ export default function RegisterSaleDialog() {
         </ScrollArea>
 
         <DialogFooter>
-          <Button type="submit" variant="outline">
+          <Button type="button" variant="outline" onClick={handleSubmit}>
             Salvar venda
           </Button>
         </DialogFooter>

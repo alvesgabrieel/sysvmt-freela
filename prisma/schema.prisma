@@ -36,6 +36,7 @@ model Client {
   state          String
   city           String
   tags           Tag[]    @relation("ClientTag") // Cria uma nova tabela de relacionamento N:N
+  sales          Sale[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -47,21 +48,23 @@ model Cashback {
   endDate      DateTime
   percentage   Float
   validityDays Int
-  purchaseData DateTime
+  purchaseDate DateTime
   checkin      DateTime
   checkout     DateTime
+  sales        Sale[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
 
 model Companion {
-  id          Int      @id @default(autoincrement())
+  id          Int             @id @default(autoincrement())
   name        String
   phone       String
   email       String
   dateOfBirth String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  sales       SaleCompanion[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 }
 
 model Tag {
@@ -74,20 +77,21 @@ model Tag {
 }
 
 model Ticket {
-  id          Int      @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   name        String
   state       String
   city        String
   observation String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  saleTicket  SaleTicket[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 model Saller {
-  id          Int      @id @default(autoincrement())
+  id          Int                @id @default(autoincrement())
   name        String
-  login       String   @unique
-  email       String   @unique
+  login       String             @unique
+  email       String             @unique
   phone       String
   cpf         String
   rg          String
@@ -99,37 +103,138 @@ model Saller {
   adress      String
   number      String
   complement  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  commissions SallerCommission[]
+  sales       Sale[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model SallerCommission {
+  id                    Int          @id @default(autoincrement())
+  saller                Saller       @relation(fields: [sallerId], references: [id], onDelete: Cascade)
+  sallerId              Int
+  tourOperator          TourOperator @relation(fields: [tourOperatorId], references: [id])
+  tourOperatorId        Int
+  upfrontCommission     Float
+  installmentCommission Float
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
 }
 
 model Hosting {
-  id          Int      @id @default(autoincrement())
+  id          Int           @id @default(autoincrement())
   name        String
   state       String
   city        String
   observation String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  saleHosting SaleHosting[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
 model TourOperator {
-  id                   Int      @id @default(autoincrement())
-  name                 String
-  phone                String
-  contact              String
-  email                String   @unique
-  site                 String
-  login                String   @unique
-  password             String
-  upfrontComission     Float?
-  installmentComission Float?
-  observation          String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                    Int                @id @default(autoincrement())
+  name                  String
+  phone                 String
+  contact               String
+  email                 String             @unique
+  site                  String
+  login                 String             @unique
+  password              String
+  upfrontCommission     Float?
+  installmentCommission Float?
+  observation           String?
+  commission            SallerCommission[]
+  sales                 Sale[]
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+}
+
+model Sale {
+  id               Int               @id @default(autoincrement())
+  idInTourOperator Int //ID na operadora
+  saller           Saller            @relation(fields: [sallerId], references: [id])
+  sallerId         Int
+  paymentMethod    PaymentMethodType
+  tourOperator     TourOperator      @relation(fields: [tourOperatorId], references: [id])
+  tourOperatorId   Int // Chave estrangeira para TourOperator
+  sallerCommission Float
+  agencyCommission Float
+  saleDate         DateTime
+  checkIn          DateTime
+  checkOut         DateTime
+  client           Client            @relation(fields: [clientId], references: [id])
+  clientId         Int // Chave estrangeira para Client
+  ticketDiscount   Float
+  hostingDiscount  Float
+  cashback         Cashback?         @relation(fields: [cashbackId], references: [id])
+  cashbackId       Int? // Chave estrangeira opcional para Cashback
+  observation      String
+  canceledSale     Boolean           @default(false)
+  companions       SaleCompanion[]
+  saleHosting      SaleHosting[]
+  saleTicket       SaleTicket[]
+  invoice          Invoice? // Relação 1:1 (uma venda pode ter zero ou uma NF)
+}
+
+model SaleCompanion {
+  id          Int       @id @default(autoincrement())
+  sale        Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  saleId      Int
+  companion   Companion @relation(fields: [companionId], references: [id])
+  companionId Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model SaleTicket {
+  id              Int      @id @default(autoincrement())
+  sale            Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  saleId          Int
+  ticket          Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId        Int
+  date            DateTime
+  adults          Int
+  kids            Int
+  halfPriceTicket Int
+  price           Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SaleHosting {
+  id        Int      @id @default(autoincrement())
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  saleId    Int
+  hosting   Hosting  @relation(fields: [hostingId], references: [id])
+  hostingId Int
+  rooms     Int
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Invoice {
+  id                  Int       @id @default(autoincrement())
+  sale                Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  saleId              Int       @unique // Garante 1:1
+  issuedInvoice       String
+  estimatedIssueDate  DateTime?
+  invoiceNumber       String?   @unique
+  invoiceDate         DateTime?
+  expectedReceiptDate DateTime?
+  invoiceReceived     String
+  receiptDate         DateTime?
 }
 
 enum UserType {
   ADMIN
   USER
+}
+
+enum PaymentMethodType {
+  PIX
+  DINHEIRO
+  DEBITO
+  CREDITO
 }

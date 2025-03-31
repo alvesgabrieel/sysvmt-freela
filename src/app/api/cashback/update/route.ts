@@ -20,14 +20,14 @@ export async function PUT(request: Request) {
 
     const startDate = parseBrazilianDate(data.startDate);
     const endDate = parseBrazilianDate(data.endDate);
-    const purchaseData = parseBrazilianDate(data.purchaseData);
+    const purchaseDate = parseBrazilianDate(data.purchaseDate);
     const checkin = parseBrazilianDate(data.checkin);
     const checkout = parseBrazilianDate(data.checkout);
 
     if (
       isNaN(startDate.getTime()) ||
       isNaN(endDate.getTime()) ||
-      isNaN(purchaseData.getTime()) ||
+      isNaN(purchaseDate.getTime()) ||
       isNaN(checkin.getTime()) ||
       isNaN(checkout.getTime())
     ) {
@@ -94,7 +94,7 @@ export async function PUT(request: Request) {
         endDate: endDate,
         percentage: percentage,
         validityDays: validityDays,
-        purchaseData: purchaseData,
+        purchaseDate: purchaseDate,
         checkin: checkin,
         checkout: checkout,
       },

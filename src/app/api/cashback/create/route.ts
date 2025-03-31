@@ -8,37 +8,37 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
 
-    // Validação dos campos obrigatórios
-    if (
-      !data.name ||
-      !data.startDate ||
-      !data.endDate ||
-      !data.percentage ||
-      !data.validityDays ||
-      !data.purchaseData ||
-      !data.checkin ||
-      !data.checkout
-    ) {
-      return NextResponse.json(
-        {
-          error: "Dados inválidos.",
-          message: "Preencha todos os campos obrigatórios.",
-        },
-        { status: 400 },
-      );
-    }
+    // // Validação dos campos obrigatórios
+    // if (
+    //   !data.name ||
+    //   !data.startDate ||
+    //   !data.endDate ||
+    //   !data.percentage ||
+    //   !data.validityDays ||
+    //   !data.purchaseDate ||
+    //   !data.checkin ||
+    //   !data.checkout
+    // ) {
+    //   return NextResponse.json(
+    //     {
+    //       error: "Dados inválidos.",
+    //       message: "Preencha todos os campos obrigatórios.",
+    //     },
+    //     { status: 400 },
+    //   );
+    // }
 
     // Conversão e validação das datas
     const startDate = parseBrazilianDate(data.startDate);
     const endDate = parseBrazilianDate(data.endDate);
-    const purchaseData = parseBrazilianDate(data.purchaseData);
+    const purchaseDate = parseBrazilianDate(data.purchaseDate);
     const checkin = parseBrazilianDate(data.checkin);
     const checkout = parseBrazilianDate(data.checkout);
 
     if (
       isNaN(startDate.getTime()) ||
       isNaN(endDate.getTime()) ||
-      isNaN(purchaseData.getTime()) ||
+      isNaN(purchaseDate.getTime()) ||
       isNaN(checkin.getTime()) ||
       isNaN(checkout.getTime())
     ) {
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
         endDate: endDate, // Usando o objeto Date convertido
         percentage: percentage,
         validityDays: validityDays,
-        purchaseData: purchaseData,
+        purchaseDate: purchaseDate,
         checkin: checkin,
         checkout: checkout,
       },
