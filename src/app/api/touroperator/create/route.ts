@@ -65,8 +65,8 @@ export async function POST(request: Request) {
         site: data.site,
         login: data.login,
         password: data.password,
-        upfrontComission: data.upfrontComission,
-        installmentComission: data.installmentComission,
+        upfrontCommission: data.upfrontComission,
+        installmentCommission: data.installmentComission,
         observation: data.observation,
       },
     });
