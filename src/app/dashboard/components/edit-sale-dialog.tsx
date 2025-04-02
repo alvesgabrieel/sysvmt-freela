@@ -105,12 +105,42 @@ export default function EditSaleDialog({
     if (sale) {
       setEditedSale({
         ...sale,
+        saleDate: ensureDateFormat(sale.saleDate),
+        checkIn: ensureDateFormat(sale.checkIn),
+        checkOut: ensureDateFormat(sale.checkOut),
         companions: sale.companions || [],
+        saleTicket: sale.saleTicket?.map((ticket) => ({
+          ...ticket,
+          date: ensureDateFormat(ticket.date),
+        })),
+        invoice: sale.invoice
+          ? {
+              ...sale.invoice,
+              estimatedIssueDate: ensureDateFormat(
+                sale.invoice.estimatedIssueDate,
+              ),
+              invoiceDate: ensureDateFormat(sale.invoice.invoiceDate),
+              expectedReceiptDate: ensureDateFormat(
+                sale.invoice.expectedReceiptDate,
+              ),
+              receiptDate: ensureDateFormat(sale.invoice.receiptDate),
+            }
+          : undefined,
       });
-    } else {
-      setEditedSale({});
     }
   }, [sale]);
+
+  const ensureDateFormat = (date: string | Date | null | undefined): string => {
+    if (!date) return "";
+    // Se já está no formato DD/MM/AAAA, retorna como está
+    if (typeof date === "string" && /^\d{2}\/\d{2}\/\d{4}$/.test(date))
+      return date;
+
+    // Se for objeto Date, converte para string ISO antes de formatar
+    const formattedDate = typeof date === "string" ? date : date.toISOString();
+    // Se for objeto Date ou ISO string, formata para DD/MM/AAAA
+    return formatBackendDateToFrontend(formattedDate);
+  };
 
   //busca vendedores
   useEffect(() => {
@@ -361,6 +391,12 @@ export default function EditSaleDialog({
           receiptDate: editedSale.invoice?.receiptDate,
         },
       };
+
+      // LOG PARA VERIFICAR O QUE ESTÁ SENDO ENVIADO (FRONTEND)
+      console.log(
+        "🔄 Dados enviados para o backend:",
+        JSON.stringify(updateData, null, 2),
+      );
 
       // Envia para a API
       const response = await fetch("/api/sale/update", {
