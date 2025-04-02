@@ -167,6 +167,7 @@ const CashbackComponent = () => {
       console.error("Erro ao carregar os cashbacks", err);
     }
   };
+
   const handleDeleteCashbacks = async (cashbackId: number) => {
     try {
       const response = await fetch(`/api/cashback/delete?id=${cashbackId}`, {

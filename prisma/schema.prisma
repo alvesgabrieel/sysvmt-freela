@@ -158,8 +158,8 @@ model Sale {
   paymentMethod    PaymentMethodType
   tourOperator     TourOperator      @relation(fields: [tourOperatorId], references: [id])
   tourOperatorId   Int // Chave estrangeira para TourOperator
-  sallerCommission Float
-  agencyCommission Float
+  // sallerCommission Float
+  // agencyCommission Float
   saleDate         DateTime
   checkIn          DateTime
   checkOut         DateTime
@@ -175,6 +175,10 @@ model Sale {
   saleHosting      SaleHosting[]
   saleTicket       SaleTicket[]
   invoice          Invoice? // Relação 1:1 (uma venda pode ter zero ou uma NF)
+  grossTotal       Float
+  totalCashback    Float
+  totalDiscount    Float
+  netTotal         Float
 }
 
 model SaleCompanion {

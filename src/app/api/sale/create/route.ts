@@ -44,8 +44,8 @@ interface SaleRequest {
   saleDate: string; // Formato "dd/mm/aaaa"
   checkIn: string; // Formato "dd/mm/aaaa"
   checkOut: string; // Formato "dd/mm/aaaa"
-  sallerCommission: string; // Formato "12,8"
-  agencyCommission: string; // Formato "15,5"
+  // sallerCommission: string; // Formato "12,8"
+  // agencyCommission: string; // Formato "15,5"
   ticketDiscount: string; // Formato "0,00"
   hostingDiscount: string; // Formato "50,00"
   observation?: string;
@@ -80,8 +80,8 @@ export async function POST(request: Request) {
 
     // Converte valores e datas
     const convertNumbers = {
-      sallerCommission: parseBrazilianNumber(body.sallerCommission),
-      agencyCommission: parseBrazilianNumber(body.agencyCommission),
+      // sallerCommission: parseBrazilianNumber(body.sallerCommission),
+      // agencyCommission: parseBrazilianNumber(body.agencyCommission),
       ticketDiscount: parseBrazilianNumber(body.ticketDiscount),
       hostingDiscount: parseBrazilianNumber(body.hostingDiscount),
     };
@@ -95,6 +95,40 @@ export async function POST(request: Request) {
     // Transação Prisma
     const result = await db.$transaction(
       async (prisma) => {
+        // Calcula o total de hospedagens
+        const totalHostings =
+          body.hostings?.reduce((sum, hosting) => {
+            return sum + parseBrazilianNumber(hosting.price);
+          }, 0) || 0;
+
+        // Calcula o total de passagens
+        const totalTickets =
+          body.tickets?.reduce((sum, ticket) => {
+            return sum + parseBrazilianNumber(ticket.price);
+          }, 0) || 0;
+
+        // Calcula o grossTotal (soma de hospedagens e passagens)
+        const grossTotal = totalHostings + totalTickets;
+
+        // Calcula o totalDiscount (soma dos descontos)
+        const totalDiscount =
+          convertNumbers.ticketDiscount + convertNumbers.hostingDiscount;
+
+        // Calcula o totalCashback (porcentagem do grossTotal)
+        let totalCashback = 0;
+        if (body.cashbackId) {
+          const cashback = await prisma.cashback.findUnique({
+            where: { id: body.cashbackId },
+            select: { percentage: true }, // Agora buscamos a porcentagem
+          });
+          if (cashback?.percentage) {
+            totalCashback = grossTotal * (cashback.percentage / 100);
+          }
+        }
+
+        // Calcula o netTotal (grossTotal - descontos - cashback)
+        const netTotal = grossTotal - totalDiscount - totalCashback;
+
         // 1. Cria a venda
         const sale = await prisma.sale.create({
           data: {
@@ -106,12 +140,16 @@ export async function POST(request: Request) {
             saleDate: convertDates.saleDate,
             checkIn: convertDates.checkIn,
             checkOut: convertDates.checkOut,
-            sallerCommission: convertNumbers.sallerCommission,
-            agencyCommission: convertNumbers.agencyCommission,
+            // sallerCommission: convertNumbers.sallerCommission,
+            // agencyCommission: convertNumbers.agencyCommission,
             ticketDiscount: convertNumbers.ticketDiscount,
             hostingDiscount: convertNumbers.hostingDiscount,
             observation: body.observation || "",
             cashbackId: body.cashbackId || null,
+            grossTotal,
+            totalCashback,
+            totalDiscount,
+            netTotal,
             companions: body.companions
               ? {
                   create: body.companions.map((comp) => ({

@@ -530,7 +530,7 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
                   </Label>
                   <select
                     id={`operadora-${index}`}
-                    className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-96 rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-80 rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={comissao.operadora}
                     onChange={(e) =>
                       handleComissaoChange(index, "operadora", e.target.value)
@@ -550,7 +550,7 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
                   <Input
                     id={`a-vista-${index}`}
                     type="text"
-                    className="w-20 rounded-md border p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-30 rounded-md border p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={formatPercentage(comissao.aVistaInput)}
                     onKeyDown={(e) =>
                       handlePercentageKeyDown(
@@ -570,7 +570,7 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
                   <Input
                     id={`parcelado-${index}`}
                     type="text"
-                    className="w-20 rounded-md border p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-30 rounded-md border p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={formatPercentage(comissao.parceladoInput)}
                     onKeyDown={(e) =>
                       handlePercentageKeyDown(

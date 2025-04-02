@@ -1,6 +1,8 @@
 import { PaymentMethodType } from "@prisma/client";
+import { Loader } from "lucide-react";
 import { useEffect, useState } from "react";
 import { IMaskInput } from "react-imask";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -94,6 +96,9 @@ interface FormData {
 
 export default function RegisterSaleDialog() {
   const [activeTab, setActiveTab] = useState("gerais");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [acompanhantes, setAcompanhantes] = useState<Companion[]>([]);
   const [registrosHospedagem, setRegistrosHospedagem] = useState<Hospedagem[]>(
     [],
@@ -281,6 +286,54 @@ export default function RegisterSaleDialog() {
     }
   };
 
+  const limparCampos = () => {
+    // Limpa os campos do formulário principal
+    setFormData({
+      idInTourOperator: "",
+      sallerId: "",
+      tourOperatorId: "",
+      clientId: "",
+      paymentMethod: "",
+      saleDate: "",
+      checkIn: "",
+      checkOut: "",
+      sallerCommission: "",
+      agencyCommission: "",
+      ticketDiscount: "0",
+      hostingDiscount: "0",
+      observation: "",
+      cashbackId: "",
+      canceledSale: false,
+      invoice: {
+        issuedInvoice: "",
+        estimatedIssueDate: "",
+        invoiceNumber: "",
+        invoiceDate: "",
+        expectedReceiptDate: "",
+        invoiceReceived: "",
+        receiptDate: "",
+      },
+    });
+
+    // Limpa os acompanhantes
+    setAcompanhantes([{ id: 0, name: "" }]);
+
+    // Limpa as hospedagens
+    setRegistrosHospedagem([]);
+    setHospedagemSelecionada("");
+    setQuartos("");
+    setValor("");
+
+    // Limpa os ingressos
+    setRegistrosIngresso([]);
+    setData("");
+    setIngresso("");
+    setAdulto("");
+    setCrianca("");
+    setMeia("");
+    setValoringresso("");
+  };
+
   const adicionarAcompanhante = () => {
     const opcoesDisponiveis = getOpcoesDisponiveis(acompanhantes.length);
     if (opcoesDisponiveis.length > 0) {
@@ -336,6 +389,49 @@ export default function RegisterSaleDialog() {
     }));
   };
 
+  const formatCurrencyForInput = (value: string): string => {
+    // Remove tudo que não for dígito
+    let digits = value.replace(/\D/g, "");
+
+    // Adiciona zeros à esquerda se necessário para ter pelo menos 3 dígitos
+    digits = digits.padStart(3, "0");
+
+    // Formata como centavos
+    let formatted = digits.replace(/(\d{2})$/, ",$1");
+
+    // Adiciona pontos para milhares
+    formatted = formatted.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+
+    // Remove zeros à esquerda desnecessários (exceto para "0,00")
+    if (formatted.startsWith("0") && formatted.length > 4) {
+      formatted = formatted.replace(/^0+/, "");
+    }
+
+    return formatted;
+  };
+
+  const handleCurrencyChangeInput = (field: keyof FormData, value: string) => {
+    // Remove tudo que não for dígito
+    const digits = value.replace(/\D/g, "");
+
+    // Se estiver vazio, define como "0,00"
+    if (digits === "") {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: "0,00",
+      }));
+      return;
+    }
+
+    // Formata o valor
+    const formatted = formatCurrencyForInput(digits);
+
+    setFormData((prev) => ({
+      ...prev,
+      [field]: formatted,
+    }));
+  };
+
   const formatCurrencyForAPI = (value: string): string => {
     // Remove tudo que não for dígito ou vírgula
     const cleaned = value.replace(/[^\d,]/g, "");
@@ -363,32 +459,26 @@ export default function RegisterSaleDialog() {
     return dateString;
   };
 
-  // Modifique a função handleCurrencyChange para lidar melhor com a entrada
-  const handleCurrencyChange = (field: keyof FormData, value: string) => {
-    // Permite números, vírgula e backspace
-    const cleaned = value.replace(/[^\d,]/g, "");
-
-    setFormData((prev) => ({
-      ...prev,
-      [field]: cleaned,
-    }));
-  };
-
   const adicionarRegistroHospedagem = () => {
-    const valorNumerico = parseFloat(valor);
+    const valorNumerico = parseFloat(
+      valor.replace(/\./g, "").replace(",", "."),
+    ); // Converte para número
     const quartosNumerico = parseFloat(quartos);
     const hospedagemSelecionadaObj = allHostings.find(
       (h) => h.id.toString() === hospedagemSelecionada,
     );
 
     if (hospedagemSelecionadaObj && quartosNumerico > 0 && valorNumerico > 0) {
+      // Mantém a formatação original do input (1.500,34)
+      const valorFormatado = valor.includes(",") ? valor : `${valor},00`; // Garante os centavos se não existirem
+
       setRegistrosHospedagem([
         ...registrosHospedagem,
         {
           hostingId: hospedagemSelecionadaObj.id,
           name: hospedagemSelecionadaObj.name,
           quartos: quartosNumerico,
-          valor: valor.replace(".", ","), // Garante vírgula como separador decimal
+          valor: valorFormatado, // Usa o valor já formatado do input
         },
       ]);
       setHospedagemSelecionada("");
@@ -396,6 +486,7 @@ export default function RegisterSaleDialog() {
       setValor("");
     }
   };
+
   const removerRegistroHospedagem = (index: number) => {
     setRegistrosHospedagem(registrosHospedagem.filter((_, i) => i !== index));
   };
@@ -409,37 +500,57 @@ export default function RegisterSaleDialog() {
       }
     };
 
+  useEffect(() => {
+    console.log(typeof valoringresso);
+  }, [valoringresso]);
+
   const adicionarRegistroIngresso = () => {
-    const valorNumerico = parseFloat(valoringresso);
-    const adultoNumerico = parseFloat(adulto);
-    const criancaNumerico = parseFloat(crianca);
-    const meiaNumerica = parseFloat(meia);
+    const valorNumerico = valoringresso
+      ? parseFloat(valoringresso.replace(/\./g, "").replace(",", "."))
+      : 0;
+
+    const adultoNumerico = parseFloat(adulto) || 0;
+    const criancaNumerico = parseFloat(crianca) || 0;
+    const meiaNumerica = parseFloat(meia) || 0;
+
+    console.log("Dados antes de adicionar:", {
+      data,
+      ingresso,
+      adulto: adultoNumerico,
+      crianca: criancaNumerico,
+      meia: meiaNumerica,
+      valor: valorNumerico,
+    });
 
     if (
       data &&
       ingresso &&
-      adultoNumerico >= 0 &&
-      criancaNumerico >= 0 &&
-      meiaNumerica >= 0 &&
+      (adultoNumerico > 0 || criancaNumerico > 0 || meiaNumerica > 0) &&
       valorNumerico > 0
     ) {
-      setRegistrosIngresso([
-        ...registrosIngresso,
-        {
-          data,
-          ticketId: Number(ingresso), // Alterado para ticketId
-          adulto: adultoNumerico,
-          crianca: criancaNumerico,
-          meia: meiaNumerica,
-          valoringresso: valoringresso.replace(".", ","), // Garante vírgula
-        },
-      ]);
+      const novoIngresso: Ingresso = {
+        data,
+        ticketId: Number(ingresso),
+        adulto: adultoNumerico,
+        crianca: criancaNumerico,
+        meia: meiaNumerica,
+        valoringresso: valoringresso.includes(",")
+          ? valoringresso
+          : `${valoringresso},00`,
+      };
+
+      console.log("Adicionando ingresso:", novoIngresso);
+
+      setRegistrosIngresso([...registrosIngresso, novoIngresso]);
       setData("");
       setIngresso("");
       setAdulto("");
       setCrianca("");
       setMeia("");
       setValoringresso("");
+    } else {
+      console.log("Falha na validação - dados incompletos");
+      alert("Preencha todos os campos obrigatórios do ingresso!");
     }
   };
 
@@ -449,6 +560,8 @@ export default function RegisterSaleDialog() {
 
   const handleSubmit = async () => {
     try {
+      setIsSubmitting(true); // Ativa o loading
+
       if (
         !formData.idInTourOperator ||
         !formData.sallerId ||
@@ -461,7 +574,8 @@ export default function RegisterSaleDialog() {
         !formData.invoice.issuedInvoice ||
         !formData.invoice.invoiceReceived
       ) {
-        alert("Preencha todos os campos obrigatórios!");
+        toast.error("Preencha todos os campos obrigatórios!");
+        setIsSubmitting(false);
         return;
       }
 
@@ -547,17 +661,26 @@ export default function RegisterSaleDialog() {
 
       const result = await response.json();
       console.log("Venda cadastrada com sucesso:", result);
-      alert("Venda cadastrada com sucesso!");
+      toast.success("Venda cadastrada com sucesso!");
+      // Fecha o dialog e limpa os campos
+      setIsDialogOpen(false);
+      limparCampos();
     } catch (error) {
       console.error("Erro:", error);
-      alert("Erro ao cadastrar venda. Verifique os dados e tente novamente.");
+      toast.error(
+        "Erro ao cadastrar venda. Verifique os dados e tente novamente.",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog>
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Cadastrar venda</Button>
+        <Button variant="outline" onClick={() => setIsDialogOpen(true)}>
+          Cadastrar venda
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px] md:max-w-[900px] lg:max-w-[1100px]">
         <DialogHeader>
@@ -701,36 +824,6 @@ export default function RegisterSaleDialog() {
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="comissao-vendedor" className="text-right">
-                  Comissão do vendedor
-                </Label>
-                <Input
-                  id="comissao-vendedor"
-                  value={formData.sallerCommission}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    // Permite apenas números e vírgula
-                    const value = e.target.value.replace(/[^\d,]/g, "");
-                    handleCurrencyChange("sallerCommission", value);
-                  }}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="comissa-agencia" className="text-right">
-                  Comissão da agência
-                </Label>
-                <Input
-                  id="comissao-agencia"
-                  value={formData.agencyCommission}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    // Permite apenas números e vírgula
-                    const value = e.target.value.replace(/[^\d,]/g, "");
-                    handleCurrencyChange("agencyCommission", value);
-                  }}
-                  className="col-span-3"
-                />
-              </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Data da Venda</Label>
@@ -802,7 +895,7 @@ export default function RegisterSaleDialog() {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     // Permite apenas números e vírgula
                     const value = e.target.value.replace(/[^\d,]/g, "");
-                    handleCurrencyChange("ticketDiscount", value);
+                    handleCurrencyChangeInput("ticketDiscount", value);
                   }}
                   className="col-span-3"
                 />
@@ -817,7 +910,7 @@ export default function RegisterSaleDialog() {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     // Permite apenas números e vírgula
                     const value = e.target.value.replace(/[^\d,]/g, "");
-                    handleCurrencyChange("hostingDiscount", value);
+                    handleCurrencyChangeInput("hostingDiscount", value);
                   }}
                   className="col-span-3"
                 />
@@ -1001,16 +1094,22 @@ export default function RegisterSaleDialog() {
                 </Label>
                 <Input
                   id="valor"
-                  type="text"
                   value={valor}
-                  onChange={(e) => {
-                    const valorDigitado = e.target.value.replace(
-                      /[^0-9.]/g,
-                      "",
-                    );
-                    setValor(valorDigitado);
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const digits = e.target.value.replace(/\D/g, "");
+                    const formatted = formatCurrencyForInput(digits);
+                    setValor(formatted);
+                  }}
+                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                    if (!e.target.value.includes(",")) {
+                      const formatted = formatCurrencyForInput(
+                        e.target.value + "00",
+                      );
+                      setValor(formatted);
+                    }
                   }}
                   className="col-span-3"
+                  min="0"
                 />
               </div>
 
@@ -1056,10 +1155,8 @@ export default function RegisterSaleDialog() {
                   mask="00/00/0000"
                   overwrite
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={formData.saleDate}
-                  onAccept={(value) =>
-                    handleInputChange("saleDate", value as string)
-                  }
+                  value={data} // Alterado de formData.saleDate para data
+                  onAccept={(value) => setData(value as string)} // Alterado para setData
                 />
               </div>
 
@@ -1135,14 +1232,19 @@ export default function RegisterSaleDialog() {
                 </Label>
                 <Input
                   id="valor"
-                  type="text"
                   value={valoringresso}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    const valorDigitado = e.target.value.replace(
-                      /[^0-9.]/g,
-                      "",
-                    );
-                    setValoringresso(valorDigitado);
+                    const digits = e.target.value.replace(/\D/g, "");
+                    const formatted = formatCurrencyForInput(digits);
+                    setValoringresso(formatted);
+                  }}
+                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                    if (!e.target.value.includes(",")) {
+                      const formatted = formatCurrencyForInput(
+                        e.target.value + "00",
+                      );
+                      setValoringresso(formatted);
+                    }
                   }}
                   className="col-span-3"
                   min="0"
@@ -1182,8 +1284,7 @@ export default function RegisterSaleDialog() {
                         <strong>Meia:</strong> {registro.meia}
                       </p>
                       <p>
-                        <strong>Valor:</strong> R${" "}
-                        {parseFloat(registro.valoringresso).toFixed(2)}
+                        <strong>Valor:</strong> R$ {registro.valoringresso}
                       </p>
                     </div>
                   );
@@ -1304,8 +1405,31 @@ export default function RegisterSaleDialog() {
         </ScrollArea>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleSubmit}>
-            Salvar venda
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setIsDialogOpen(false);
+              limparCampos();
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="flex items-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader className="h-4 w-4 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              "Salvar venda"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
