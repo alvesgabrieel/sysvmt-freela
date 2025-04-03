@@ -85,7 +85,6 @@ export async function PUT(request: Request) {
             ticketDiscount: parseBrazilianNumber(body.ticketDiscount),
             hostingDiscount: parseBrazilianNumber(body.hostingDiscount),
             observation: body.observation,
-            cashbackId: body.cashbackId,
             canceledSale: body.canceledSale || false,
           },
         });
