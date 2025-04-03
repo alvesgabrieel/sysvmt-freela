@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,74 +23,40 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const salesData = [
-  {
-    id: 1,
-    cliente: "João Silva",
-    produto: "Produto A",
-    valor: "R$ 100,00",
-    data: "20/03/2025",
-    valiade: "20/03/2026",
-    status: "Aprovado",
-  },
-  {
-    id: 2,
-    cliente: "Maria Souza",
-    produto: "Produto B",
-    valor: "R$ 150,00",
-    data: "21/03/2025",
-    valiade: "20/03/2026",
-    status: "Aprovado",
-  },
-  {
-    id: 3,
-    cliente: "Carlos Lima",
-    produto: "Produto C",
-    valor: "R$ 200,00",
-    data: "22/03/2025",
-    valiade: "20/03/2026",
-    status: "Aprovado",
-  },
-  {
-    id: 4,
-    cliente: "Ana Pereira",
-    produto: "Produto D",
-    valor: "R$ 250,00",
-    data: "23/03/2025",
-    valiade: "20/03/2026",
-    status: "Aprovado",
-  },
-  {
-    id: 5,
-    cliente: "Bruno Rocha",
-    produto: "Produto E",
-    valor: "R$ 300,00",
-    data: "24/03/2025",
-    valiade: "20/03/2026",
-    status: "Aprovado",
-  },
-  {
-    id: 6,
-    cliente: "Fernanda Almeida",
-    produto: "Produto F",
-    valor: "R$ 350,00",
-    data: "25/03/2025",
-    valiade: "20/03/2026",
-    status: "Aprovado",
-  },
-  {
-    id: 7,
-    cliente: "Lucas Santos",
-    produto: "Produto G",
-    valor: "R$ 400,00",
-    data: "26/03/2025",
-  },
-];
+// Definir a estrutura dos dados
+type Sale = {
+  saleId: number;
+  clientName: string;
+  totalCashback: number;
+  saleDate: string;
+  expiryDate: string | null;
+  status: string;
+};
 
 const Cashback = () => {
-  const [filters, setFilters] = useState({ idVenda: "", cliente: "" });
+  const [filters, setFilters] = useState({ saleId: "", clientName: "" });
+  const [salesData, setSalesData] = useState<Sale[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5; // Número de vendas por página
+
+  const fetchSales = async () => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.saleId) queryParams.append("saleId", filters.saleId);
+      if (filters.clientName)
+        queryParams.append("clientName", filters.clientName);
+
+      const response = await fetch(
+        `/api/cashback/filter-cashback-for-sale${queryParams}`,
+      );
+      if (!response.ok) throw new Error("Erro ao buscar os dados");
+
+      const data: Sale[] = await response.json(); // Aplicando a tipagem correta
+      setSalesData(data);
+    } catch (error) {
+      console.error("Erro ao buscar vendas:", error);
+    }
+  };
 
   // Paginação - calcula os itens da página atual
   const totalPages = Math.ceil(salesData.length / itemsPerPage);
@@ -100,7 +67,6 @@ const Cashback = () => {
     <div className="flex">
       <Sidebar />
       <div className="flex-1 space-y-6 p-6">
-        {/* Barra de cima */}
         <TopBar />
         {/* Filtros */}
         <Card>
@@ -108,16 +74,21 @@ const Cashback = () => {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-4 gap-4">
-            {Object.keys(filters).map((key) => (
-              <Input
-                key={key}
-                placeholder={key.charAt(0).toUpperCase() + key.slice(1)}
-                value={filters[key as keyof typeof filters]}
-                onChange={(e) =>
-                  setFilters({ ...filters, [key]: e.target.value })
-                }
-              />
-            ))}
+            <Input
+              placeholder="ID Venda"
+              value={filters.saleId}
+              onChange={(e) =>
+                setFilters({ ...filters, saleId: e.target.value })
+              }
+            />
+            <Input
+              placeholder="Nome do Cliente"
+              value={filters.clientName}
+              onChange={(e) =>
+                setFilters({ ...filters, clientName: e.target.value })
+              }
+            />
+            <Button onClick={fetchSales}>Pesquisar</Button>
           </CardContent>
         </Card>
 
@@ -132,25 +103,37 @@ const Cashback = () => {
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Data</TableHead>
+                  <TableHead>Total Cashback</TableHead>
+                  <TableHead>Data Venda</TableHead>
                   <TableHead>Validade</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentSales.map((sale) => (
-                  <TableRow key={sale.id}>
-                    <TableCell>{sale.id}</TableCell>
-                    <TableCell>{sale.cliente}</TableCell>
-                    <TableCell>{sale.produto}</TableCell>
-                    <TableCell>{sale.valor}</TableCell>
-                    <TableCell>{sale.data}</TableCell>
-                    <TableCell>{sale.valiade}</TableCell>
-                    <TableCell>{sale.status}</TableCell>
+                {currentSales.length > 0 ? (
+                  currentSales.map((sale) => (
+                    <TableRow key={sale.saleId}>
+                      <TableCell>{sale.saleId}</TableCell>
+                      <TableCell>{sale.clientName}</TableCell>
+                      <TableCell>R$ {sale.totalCashback.toFixed(2)}</TableCell>
+                      <TableCell>
+                        {new Date(sale.saleDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {sale.expiryDate
+                          ? new Date(sale.expiryDate).toLocaleDateString()
+                          : "-"}
+                      </TableCell>
+                      <TableCell>{sale.status}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-4 text-center">
+                      Nenhuma venda encontrada
+                    </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
 
@@ -168,7 +151,7 @@ const Cashback = () => {
                   />
                 </PaginationItem>
                 <span className="px-4">
-                  Página {currentPage} de {totalPages}
+                  Página {currentPage} de {totalPages || 1}
                 </span>
                 <PaginationItem>
                   <PaginationNext

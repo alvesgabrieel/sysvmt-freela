@@ -1,5 +1,6 @@
 "use client";
 
+import { CashbackType } from "@prisma/client";
 import { KeyboardEvent, useEffect, useState } from "react";
 import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
@@ -16,6 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const CASHBACK_TYPE_LABELS: Record<CashbackType, string> = {
+  CHECKIN: "Check-in",
+  CHECKOUT: "Check-out",
+  PURCHASEDATE: "Data da Compra",
+};
+
 interface Cashback {
   id: number;
   name: string;
@@ -23,11 +30,8 @@ interface Cashback {
   endDate: string;
   percentage: string;
   validityDays: number;
-  purchaseData: string;
-  checkin: string;
-  checkout: string;
+  selectType: CashbackType;
 }
-
 interface EditCashbackDialogProps {
   cashback: Cashback;
   isOpen: boolean;
@@ -54,9 +58,6 @@ export const EditCashbackDialog = ({
     ...cashback,
     startDate: formatBackendDateToFrontend(cashback.startDate),
     endDate: formatBackendDateToFrontend(cashback.endDate),
-    purchaseData: formatBackendDateToFrontend(cashback.purchaseData),
-    checkin: formatBackendDateToFrontend(cashback.checkin),
-    checkout: formatBackendDateToFrontend(cashback.checkout),
   });
 
   // State separado para o valor bruto da porcentagem (apenas dígitos)
@@ -105,7 +106,9 @@ export const EditCashbackDialog = ({
     setValue(newValue);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
     setEditedCashback((prev) => ({ ...prev, [name]: value }));
   };
@@ -124,9 +127,6 @@ export const EditCashbackDialog = ({
       ...cashback,
       startDate: formatBackendDateToFrontend(cashback.startDate),
       endDate: formatBackendDateToFrontend(cashback.endDate),
-      purchaseData: formatBackendDateToFrontend(cashback.purchaseData),
-      checkin: formatBackendDateToFrontend(cashback.checkin),
-      checkout: formatBackendDateToFrontend(cashback.checkout),
     });
 
     // Atualiza o valor bruto da porcentagem quando o cashback muda
@@ -201,6 +201,27 @@ export const EditCashbackDialog = ({
             />
           </div>
 
+          {/* Novo campo: Select para o tipo de cashback */}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="selectType" className="text-right">
+              Tipo
+            </Label>
+            <select
+              id="selectType"
+              name="selectType"
+              value={editedCashback.selectType}
+              onChange={handleChange}
+              className="border-input ring-offset-background focus-visible:ring-ring bg-background col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              required
+            >
+              {Object.entries(CASHBACK_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="startDate" className="text-right">
               Data inicial da vigência
@@ -258,48 +279,6 @@ export const EditCashbackDialog = ({
               value={editedCashback.validityDays}
               onChange={handleChange}
               className="col-span-3"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="data-compra" className="text-right">
-              Data da compra
-            </Label>
-            <IMaskInput
-              id="data-compra"
-              mask="00/00/0000"
-              value={editedCashback.purchaseData}
-              onAccept={(value) => handleDateChange("purchaseData", value)}
-              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring bg-background col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="checkin" className="text-right">
-              Data do check-in
-            </Label>
-            <IMaskInput
-              id="checkin"
-              mask="00/00/0000"
-              value={editedCashback.checkin}
-              onAccept={(value) => handleDateChange("checkin", value)}
-              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring bg-background col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="checkout" className="text-right">
-              Data do check-out
-            </Label>
-            <IMaskInput
-              id="checkout"
-              mask="00/00/0000"
-              value={editedCashback.checkout}
-              onAccept={(value) => handleDateChange("checkout", value)}
-              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring bg-background col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               required
             />
           </div>

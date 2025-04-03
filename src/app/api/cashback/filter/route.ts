@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { CashbackType, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { parseBrazilianDate } from "@/app/functions/backend/parse-brazilian-date";
@@ -8,6 +8,7 @@ import { db } from "@/lib/prisma";
 interface Filters {
   id?: number;
   name?: string;
+  selectType?: string;
   startDate?: Date;
   endDate?: Date;
   percentage?: number;
@@ -35,7 +36,15 @@ export async function GET(request: Request) {
       filters.name = url.searchParams.get("name")!;
     }
 
-    // Filtro por data de início (formato dd/mm/aaaa)
+    // Filtro por selectType
+    if (
+      url.searchParams.has("selectType") &&
+      url.searchParams.get("selectType") !== ""
+    ) {
+      filters.selectType = url.searchParams.get("selectType")!;
+    }
+
+    // Filtro por data de início
     if (
       url.searchParams.has("startDate") &&
       url.searchParams.get("startDate") !== ""
@@ -59,7 +68,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Filtro por data final (formato dd/mm/aaaa)
+    // Filtro por data final
     if (
       url.searchParams.has("endDate") &&
       url.searchParams.get("endDate") !== ""
@@ -83,7 +92,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Filtro por percentual (aceita "25,3" ou "25.3")
+    // Filtro por percentual
     if (
       url.searchParams.has("percentage") &&
       url.searchParams.get("percentage") !== ""
@@ -130,6 +139,69 @@ export async function GET(request: Request) {
       }
     }
 
+    // Função para normalizar o selectType
+    const normalizeCashbackType = (value: string): CashbackType | undefined => {
+      const upperValue = value.toUpperCase();
+      if (Object.values(CashbackType).includes(upperValue as CashbackType)) {
+        return upperValue as CashbackType;
+      }
+      return undefined;
+    };
+
+    // Validação do selectType
+    if (filters.selectType && !normalizeCashbackType(filters.selectType)) {
+      return NextResponse.json(
+        {
+          error: "Tipo de cashback inválido",
+          message: "Valores válidos: checkin, checkout, purchasedate",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Construção das condições WHERE
+    const buildWhereConditions = (): Prisma.CashbackWhereInput[] => {
+      const conditions: Prisma.CashbackWhereInput[] = [];
+
+      if (filters.id) {
+        conditions.push({ id: { equals: filters.id } });
+      }
+
+      if (filters.name) {
+        conditions.push({
+          name: {
+            contains: filters.name,
+            mode: "insensitive" as const,
+          },
+        });
+      }
+
+      if (filters.selectType) {
+        const normalizedType = normalizeCashbackType(filters.selectType);
+        if (normalizedType) {
+          conditions.push({ selectType: { equals: normalizedType } });
+        }
+      }
+
+      if (filters.startDate) {
+        conditions.push({ startDate: { gte: filters.startDate } });
+      }
+
+      if (filters.endDate) {
+        conditions.push({ endDate: { lte: filters.endDate } });
+      }
+
+      if (filters.percentage) {
+        conditions.push({ percentage: { equals: filters.percentage } });
+      }
+
+      if (filters.validityDays) {
+        conditions.push({ validityDays: { equals: filters.validityDays } });
+      }
+
+      return conditions;
+    };
+
     // Paginação
     const page = parseInt(url.searchParams.get("page") || "1", 10);
     const itemsPerPage = parseInt(
@@ -138,34 +210,22 @@ export async function GET(request: Request) {
     );
     const skip = (page - 1) * itemsPerPage;
 
-    // CONSTRUÇÃO DO WHERE (ÚNICA ALTERAÇÃO REAL)
-    const whereClause: Prisma.CashbackWhereInput = {
-      AND: [
-        ...(filters.id ? [{ id: filters.id }] : []),
-        ...(filters.name
-          ? [{ name: { contains: filters.name, mode: "insensitive" as const } }]
-          : []),
-        ...(filters.startDate
-          ? [{ startDate: { gte: filters.startDate } }]
-          : []),
-        ...(filters.endDate ? [{ endDate: { lte: filters.endDate } }] : []),
-        ...(filters.percentage ? [{ percentage: filters.percentage }] : []),
-        ...(filters.validityDays
-          ? [{ validityDays: filters.validityDays }]
-          : []),
-      ],
-    };
-
     // Consulta ao banco
     const cashbacks = await db.cashback.findMany({
-      where: whereClause,
+      where: {
+        AND: buildWhereConditions(),
+      },
       skip,
       take: itemsPerPage,
       orderBy: { createdAt: "desc" },
     });
 
     // Contagem para paginação
-    const totalCashback = await db.cashback.count({ where: whereClause });
+    const totalCashback = await db.cashback.count({
+      where: {
+        AND: buildWhereConditions(),
+      },
+    });
     const totalPages = Math.ceil(totalCashback / itemsPerPage);
 
     return NextResponse.json(

@@ -1,4 +1,5 @@
-import { PaymentMethodType } from "@prisma/client";
+import { CashbackStatus, PaymentMethodType } from "@prisma/client";
+import { addDays } from "date-fns";
 import { NextResponse } from "next/server";
 
 import { parseBrazilianDate } from "@/app/functions/backend/parse-brazilian-date";
@@ -44,8 +45,6 @@ interface SaleRequest {
   saleDate: string; // Formato "dd/mm/aaaa"
   checkIn: string; // Formato "dd/mm/aaaa"
   checkOut: string; // Formato "dd/mm/aaaa"
-  // sallerCommission: string; // Formato "12,8"
-  // agencyCommission: string; // Formato "15,5"
   ticketDiscount: string; // Formato "0,00"
   hostingDiscount: string; // Formato "50,00"
   observation?: string;
@@ -53,14 +52,14 @@ interface SaleRequest {
   companions?: CompanionRequest[];
   hostings?: HostingRequest[];
   tickets?: TicketRequest[];
-  invoice: InvoiceRequest; // Dados da nota fiscal
+  invoice: InvoiceRequest;
 }
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as SaleRequest;
 
-    // Validação rápida
+    // Validação básica
     if (
       !body.idInTourOperator ||
       !body.sallerId ||
@@ -80,8 +79,6 @@ export async function POST(request: Request) {
 
     // Converte valores e datas
     const convertNumbers = {
-      // sallerCommission: parseBrazilianNumber(body.sallerCommission),
-      // agencyCommission: parseBrazilianNumber(body.agencyCommission),
       ticketDiscount: parseBrazilianNumber(body.ticketDiscount),
       hostingDiscount: parseBrazilianNumber(body.hostingDiscount),
     };
@@ -92,44 +89,24 @@ export async function POST(request: Request) {
       checkOut: parseBrazilianDate(body.checkOut),
     };
 
-    // Transação Prisma
     const result = await db.$transaction(
       async (prisma) => {
-        // Calcula o total de hospedagens
+        // Cálculos de totais
         const totalHostings =
           body.hostings?.reduce((sum, hosting) => {
             return sum + parseBrazilianNumber(hosting.price);
           }, 0) || 0;
 
-        // Calcula o total de passagens
         const totalTickets =
           body.tickets?.reduce((sum, ticket) => {
             return sum + parseBrazilianNumber(ticket.price);
           }, 0) || 0;
 
-        // Calcula o grossTotal (soma de hospedagens e passagens)
         const grossTotal = totalHostings + totalTickets;
-
-        // Calcula o totalDiscount (soma dos descontos)
         const totalDiscount =
           convertNumbers.ticketDiscount + convertNumbers.hostingDiscount;
 
-        // Calcula o totalCashback (porcentagem do grossTotal)
-        let totalCashback = 0;
-        if (body.cashbackId) {
-          const cashback = await prisma.cashback.findUnique({
-            where: { id: body.cashbackId },
-            select: { percentage: true }, // Agora buscamos a porcentagem
-          });
-          if (cashback?.percentage) {
-            totalCashback = grossTotal * (cashback.percentage / 100);
-          }
-        }
-
-        // Calcula o netTotal (grossTotal - descontos - cashback)
-        const netTotal = grossTotal - totalDiscount - totalCashback;
-
-        // 1. Cria a venda
+        // 1. Cria a venda (netTotal NÃO inclui cashback)
         const sale = await prisma.sale.create({
           data: {
             idInTourOperator: body.idInTourOperator,
@@ -140,16 +117,13 @@ export async function POST(request: Request) {
             saleDate: convertDates.saleDate,
             checkIn: convertDates.checkIn,
             checkOut: convertDates.checkOut,
-            // sallerCommission: convertNumbers.sallerCommission,
-            // agencyCommission: convertNumbers.agencyCommission,
             ticketDiscount: convertNumbers.ticketDiscount,
             hostingDiscount: convertNumbers.hostingDiscount,
             observation: body.observation || "",
-            cashbackId: body.cashbackId || null,
             grossTotal,
-            totalCashback,
+            totalCashback: 0, // Inicializado como 0
             totalDiscount,
-            netTotal,
+            netTotal: grossTotal - totalDiscount, // ✅ Não subtrai cashback
             companions: body.companions
               ? {
                   create: body.companions.map((comp) => ({
@@ -181,7 +155,65 @@ export async function POST(request: Request) {
           },
         });
 
-        // 2. Cria a nota fiscal
+        let totalCashback = 0;
+        let saleCashback = null;
+
+        // 2. Lógica do Cashback (sem afetar netTotal)
+        if (body.cashbackId) {
+          const cashback = await prisma.cashback.findUnique({
+            where: { id: body.cashbackId },
+          });
+
+          if (cashback) {
+            // Determina data base conforme tipo
+            let startDate: Date;
+            switch (cashback.selectType) {
+              case "PURCHASEDATE":
+                startDate = convertDates.saleDate;
+                break;
+              case "CHECKIN":
+                startDate = convertDates.checkIn;
+                break;
+              case "CHECKOUT":
+                startDate = convertDates.checkOut;
+                break;
+              default:
+                startDate = convertDates.saleDate;
+            }
+
+            // 1. Calcular expiryDate garantindo horário final do dia
+            const expiryDate = addDays(
+              new Date(startDate.setHours(23, 59, 59, 999)), // Fim do dia
+              cashback.validityDays,
+            );
+            const status = CashbackStatus.ACTIVE;
+
+            // Calcula valor do cashback (10% de grossTotal, por exemplo)
+            totalCashback = grossTotal * (cashback.percentage / 100);
+
+            // Cria registro de SaleCashback
+            saleCashback = await prisma.saleCashback.create({
+              data: {
+                saleId: sale.id,
+                cashbackId: cashback.id,
+                status,
+                amount: totalCashback,
+                expiryDate,
+              },
+            });
+
+            // Atualiza APENAS totalCashback (netTotal permanece inalterado)
+            await prisma.sale.update({
+              where: { id: sale.id },
+              data: {
+                totalCashback, // Armazena o valor calculado
+                // netTotal NÃO é atualizado (mantém grossTotal - totalDiscount)
+              },
+            });
+          }
+        }
+
+        // 3. Cria nota fiscal
         const invoice = await prisma.invoice.create({
           data: {
             saleId: sale.id,
@@ -203,11 +235,11 @@ export async function POST(request: Request) {
           },
         });
 
-        return { sale, invoice };
+        return { sale, saleCashback, invoice };
       },
       {
-        timeout: 10000, // ⏳ 10 segundos (em milissegundos)
-        maxWait: 10000, // ⏳ Tempo máximo de espera para iniciar a transação
+        timeout: 10000,
+        maxWait: 10000,
       },
     );
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { CashbackType } from "@prisma/client";
 import { Loader } from "lucide-react";
 import { KeyboardEvent, useState } from "react";
 import { IMaskInput } from "react-imask";
@@ -24,9 +25,7 @@ interface Cashback {
   endDate: string;
   percentage: string;
   validityDays: number;
-  purchaseData: string;
-  checkin: string;
-  checkout: string;
+  selectType: CashbackType;
 }
 
 interface RegisterCashbackDialogProps {
@@ -41,9 +40,7 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
   const [endDate, setEndDate] = useState<string>("");
   const [percentage, setPercentage] = useState<string>("");
   const [validityDays, setValidityDays] = useState<string>("");
-  const [purchaseData, setPurchaseData] = useState<string>("");
-  const [checkin, setCheckin] = useState<string>("");
-  const [checkout, setCheckout] = useState<string>("");
+  const [selectType, setSelectType] = useState<string>("");
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
@@ -125,9 +122,7 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
         endDate,
         percentage: formatForBackend(percentage),
         validityDays,
-        purchaseData,
-        checkin,
-        checkout,
+        selectType,
       }),
     });
 
@@ -142,9 +137,7 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
       setEndDate("");
       setPercentage("");
       setValidityDays("");
-      setPurchaseData("");
-      setCheckin("");
-      setCheckout("");
+      setSelectType("");
     } else {
       const error = await response.json();
       toast.error(error.message);
@@ -176,6 +169,21 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
               onChange={(e) => setName(e.target.value)}
               required
             />
+          </div>
+          <div className="gap-45 grid grid-cols-4 items-center">
+            <Label htmlFor="nome" className="w-28 text-right">
+              Tipo
+            </Label>
+            <select
+              value={selectType}
+              onChange={(e) => setSelectType(e.target.value)}
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value=""></option>
+              <option value="PURCHASEDATE">Data da compra</option>
+              <option value="CHECKOUT">Check-out</option>
+              <option value="CHECKIN">Check-in</option>
+            </select>
           </div>
           <div className="gap-45 grid grid-cols-4 items-center">
             <Label
@@ -237,51 +245,7 @@ const RegisterCashbackDialog: React.FC<RegisterCashbackDialogProps> = ({
               required
             />
           </div>
-          <div className="gap-45 grid grid-cols-4 items-center">
-            <Label
-              htmlFor="data-compra"
-              className="whitespace-nowrap text-right"
-            >
-              Data da compra
-            </Label>
-            <IMaskInput
-              id="data-compra"
-              mask="00/00/0000"
-              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              value={purchaseData}
-              onAccept={(value) => setPurchaseData(value)}
-            />
-          </div>{" "}
-          <div className="gap-45 grid grid-cols-4 items-center">
-            <Label
-              htmlFor="data-checkin"
-              className="whitespace-nowrap text-right"
-            >
-              Data do check-in
-            </Label>
-            <IMaskInput
-              id="data-checkin"
-              mask="00/00/0000"
-              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              value={checkin}
-              onAccept={(value) => setCheckin(value)}
-            />
-          </div>{" "}
-          <div className="gap-45 grid grid-cols-4 items-center">
-            <Label
-              htmlFor="data-checkout"
-              className="whitespace-nowrap text-right"
-            >
-              Data do check-out
-            </Label>
-            <IMaskInput
-              id="data-checkout"
-              mask="00/00/0000"
-              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              value={checkout}
-              onAccept={(value) => setCheckout(value)}
-            />
-          </div>
+
           <DialogFooter>
             <Button type="submit" variant="outline" disabled={isLoading}>
               {isLoading ? (

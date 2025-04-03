@@ -31,17 +31,8 @@ export async function POST(request: Request) {
     // Conversão e validação das datas
     const startDate = parseBrazilianDate(data.startDate);
     const endDate = parseBrazilianDate(data.endDate);
-    const purchaseDate = parseBrazilianDate(data.purchaseDate);
-    const checkin = parseBrazilianDate(data.checkin);
-    const checkout = parseBrazilianDate(data.checkout);
 
-    if (
-      isNaN(startDate.getTime()) ||
-      isNaN(endDate.getTime()) ||
-      isNaN(purchaseDate.getTime()) ||
-      isNaN(checkin.getTime()) ||
-      isNaN(checkout.getTime())
-    ) {
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       return NextResponse.json(
         {
           error: "Data inválida.",
@@ -120,9 +111,7 @@ export async function POST(request: Request) {
         endDate: endDate, // Usando o objeto Date convertido
         percentage: percentage,
         validityDays: validityDays,
-        purchaseDate: purchaseDate,
-        checkin: checkin,
-        checkout: checkout,
+        selectType: data.selectType,
       },
     });
 

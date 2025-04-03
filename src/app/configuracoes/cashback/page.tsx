@@ -1,5 +1,6 @@
 "use client";
 
+import { CashbackType } from "@prisma/client";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -28,6 +29,17 @@ import {
 import { EditCashbackDialog } from "./components/edit-cashback-dialog";
 import RegisterCashbackDialog from "./components/register-cashback-dialog";
 
+const CASHBACK_TYPE_LABELS: Record<CashbackType, string> = {
+  CHECKIN: "Check-in",
+  CHECKOUT: "Check-out",
+  PURCHASEDATE: "Data da Compra",
+};
+
+// Função helper para obter o label
+const getCashbackTypeLabel = (type: CashbackType): string => {
+  return CASHBACK_TYPE_LABELS[type] || type;
+};
+
 interface Cashback {
   id: number;
   name: string;
@@ -35,9 +47,7 @@ interface Cashback {
   endDate: string;
   percentage: string;
   validityDays: number;
-  purchaseData: string;
-  checkin: string;
-  checkout: string;
+  selectType: CashbackType;
 }
 
 const CashbackComponent = () => {
@@ -47,6 +57,7 @@ const CashbackComponent = () => {
     endDate: "",
     percentage: "",
     validityDays: "",
+    selectType: "",
   });
 
   const [cashbacks, setCashbacks] = useState<Cashback[]>([]);
@@ -201,6 +212,7 @@ const CashbackComponent = () => {
         endDate: "",
         percentage: "",
         validityDays: "",
+        selectType: "",
         ...Object.fromEntries(
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           Object.entries(filters).filter(([_, value]) => value !== ""),
@@ -283,6 +295,22 @@ const CashbackComponent = () => {
                 setFilters({ ...filters, validityDays: e.target.value })
               }
             />
+            <div className="grid w-full items-center gap-1.5">
+              <select
+                value={filters.selectType}
+                onChange={(e) =>
+                  setFilters({ ...filters, selectType: e.target.value })
+                }
+                className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Tipo do cashback</option>
+                {Object.entries(CASHBACK_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <Button
               onClick={applyFilters}
               variant="outline"
@@ -313,6 +341,7 @@ const CashbackComponent = () => {
                     <TableHead>Data final da vigência</TableHead>
                     <TableHead>Percentual</TableHead>
                     <TableHead>Validade</TableHead>
+                    <TableHead>Tipo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -333,6 +362,9 @@ const CashbackComponent = () => {
                         })}
                       </TableCell>
                       <TableCell>{cashback.validityDays}</TableCell>
+                      <TableCell>
+                        {getCashbackTypeLabel(cashback.selectType)}
+                      </TableCell>
                       <TableCell>
                         <Button
                           variant="outline"
