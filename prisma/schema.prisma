@@ -128,23 +128,25 @@ model Hosting {
 }
 
 model TourOperator {
-  id                    Int                @id @default(autoincrement())
-  name                  String
-  phone                 String
-  contact               String
-  email                 String             @unique
-  site                  String
-  login                 String             @unique
-  password              String
-  upfrontCommission     Float?
-  installmentCommission Float?
-  observation           String?
-  commission            SallerCommission[]
-  sales                 Sale[]
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
-  hostingCommission     Float
-  ticketCommission      Float
+  id                           Int                @id @default(autoincrement())
+  name                         String
+  phone                        String
+  contact                      String
+  email                        String             @unique
+  site                         String
+  login                        String             @unique
+  password                     String
+  upfrontCommission            Float?
+  installmentCommission        Float?
+  observation                  String?
+  commission                   SallerCommission[]
+  sales                        Sale[]
+  createdAt                    DateTime           @default(now())
+  updatedAt                    DateTime           @updatedAt
+  hostingCommissionUpfront     Float
+  hostingCommissionInstallment Float
+  ticketCommissionUpfront      Float
+  ticketCommissionInstallment  Float
 }
 
 model Sale {
