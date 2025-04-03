@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { parseBrazilianNumber } from "@/app/functions/backend/parse-brazilian-number";
 // import { parseBrazilianNumber } from "@/app/functions/backend/parse-brazilian-number";
 import { db } from "@/lib/prisma";
 
@@ -25,20 +26,33 @@ export async function POST(request: Request) {
     }
 
     // Converter os valores para float
-    // const upfrontComission = parseBrazilianNumber(data.upfrontComission);
-    // const installmentComission = parseBrazilianNumber(
-    //   data.installmentComission,
-    // );
+    const hostingCommissionUpfront = parseBrazilianNumber(
+      data.hostingCommissionUpfront,
+    );
+    const hostingCommissionInstallment = parseBrazilianNumber(
+      data.hostingCommissionInstallment,
+    );
+    const ticketCommissionUpfront = parseBrazilianNumber(
+      data.ticketCommissionUpfront,
+    );
+    const ticketCommissionInstallment = parseBrazilianNumber(
+      data.ticketCommissionInstallment,
+    );
 
-    // if (isNaN(upfrontComission) || isNaN(installmentComission)) {
-    //   return NextResponse.json(
-    //     {
-    //       error: "Dados inválidos.",
-    //       message: "Comissões devem ser números válidos.",
-    //     },
-    //     { status: 400 },
-    //   );
-    // }
+    if (
+      isNaN(hostingCommissionUpfront) ||
+      isNaN(hostingCommissionInstallment) ||
+      isNaN(ticketCommissionUpfront) ||
+      isNaN(ticketCommissionInstallment)
+    ) {
+      return NextResponse.json(
+        {
+          error: "Dados inválidos.",
+          message: "Comissões devem ser números válidos.",
+        },
+        { status: 400 },
+      );
+    }
 
     const existingTourOperator = await db.tourOperator.findFirst({
       where: {
@@ -65,9 +79,11 @@ export async function POST(request: Request) {
         site: data.site,
         login: data.login,
         password: data.password,
-        upfrontCommission: data.upfrontComission,
-        installmentCommission: data.installmentComission,
         observation: data.observation,
+        hostingCommissionUpfront,
+        hostingCommissionInstallment,
+        ticketCommissionUpfront,
+        ticketCommissionInstallment,
       },
     });
 
