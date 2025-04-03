@@ -22,11 +22,12 @@ interface TourOperator {
   site: string;
   login: string;
   password: string;
-  upfrontComission: number | string;
-  installmentComission: number | string;
   observation?: string | null;
+  hostingCommissionUpfront: string;
+  hostingCommissionInstallment: string;
+  ticketCommissionUpfront: string;
+  ticketCommissionInstallment: string;
 }
-
 interface EditTourOperatorDialogProps {
   tourOperator: TourOperator;
   isOpen: boolean;
@@ -41,67 +42,81 @@ export const EditTourOperatorDialog = ({
   onSave,
 }: EditTourOperatorDialogProps) => {
   // Converte o valor inicial para o formato de digitação (remove vírgula e símbolo %)
-  // const convertInitialValue = (value: number | string): string => {
-  //   if (typeof value === "number") {
-  //     return String(value).replace(".", "");
-  //   }
-  //   return value.replace(/,|%/g, "");
-  // };
+  const convertInitialValue = (value: number | string): string => {
+    if (typeof value === "number") {
+      return String(Math.round(value * 100)); // Multiplica por 100 para converter corretamente
+    }
+    return value.replace(/,|%/g, "");
+  };
 
   const [editedTourOperator, setEditedTourOperator] = useState<TourOperator>({
     ...tourOperator,
     observation: tourOperator.observation || "",
   });
 
-  // States separados para os valores brutos das comissões
-  // const [upfrontInput, setUpfrontInput] = useState<string>(() =>
-  //   convertInitialValue(tourOperator.upfrontComission),
-  // );
-  // const [installmentInput, setInstallmentInput] = useState<string>(() =>
-  //   convertInitialValue(tourOperator.installmentComission),
-  // );
+  //States separados para os valores brutos das comissões
+  const [hostingCommissionUpfrontInput, setHostingCommissionUpfrontInput] =
+    useState<string>(() =>
+      convertInitialValue(tourOperator.hostingCommissionUpfront),
+    );
+  const [
+    hostingCommissionInstallmentInput,
+    setHostingCommissionInstallmentInput,
+  ] = useState<string>(() =>
+    convertInitialValue(tourOperator.hostingCommissionInstallment),
+  );
+  const [ticketCommissionUpfrontInput, setTicketCommissionUpfrontInput] =
+    useState<string>(() =>
+      convertInitialValue(tourOperator.ticketCommissionUpfront),
+    );
+  const [
+    ticketCommissionInstallmentInput,
+    setTicketCommissionInstallmentInput,
+  ] = useState<string>(() =>
+    convertInitialValue(tourOperator.ticketCommissionInstallment),
+  );
 
-  // // Função para formatar o valor digitado como porcentagem (0,05%, 1,23%, etc)
-  // const formatPercentage = (input: string): string => {
-  //   if (!input) return "";
+  // Função para formatar o valor digitado como porcentagem (0,05%, 1,23%, etc)
+  const formatPercentage = (input: string): string => {
+    if (!input) return "";
 
-  //   const numbers = input.replace(/\D/g, "");
-  //   const padded = numbers.padStart(3, "0"); // Garante pelo menos 3 dígitos (1 + 2 decimais)
+    const numbers = input.replace(/\D/g, "");
+    const padded = numbers.padStart(3, "0"); // Garante pelo menos 3 dígitos (1 + 2 decimais)
 
-  //   const integerPart = padded.slice(0, -2) || "0";
-  //   const decimalPart = padded.slice(-2);
+    const integerPart = padded.slice(0, -2) || "0";
+    const decimalPart = padded.slice(-2);
 
-  //   return `${integerPart},${decimalPart}%`;
-  // };
+    return `${integerPart},${decimalPart}%`;
+  };
 
-  // // Função para lidar com as teclas pressionadas
-  // const handlePercentageKeyDown = (
-  //   e: KeyboardEvent<HTMLInputElement>,
-  //   currentValue: string,
-  //   setValue: React.Dispatch<React.SetStateAction<string>>,
-  // ) => {
-  //   // Permite apenas números e Backspace
-  //   if (!/[0-9]|Backspace/.test(e.key)) {
-  //     e.preventDefault();
-  //     return;
-  //   }
+  // Função para lidar com as teclas pressionadas
+  const handlePercentageKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    currentValue: string,
+    setValue: React.Dispatch<React.SetStateAction<string>>,
+  ) => {
+    // Permite apenas números e Backspace
+    if (!/[0-9]|Backspace/.test(e.key)) {
+      e.preventDefault();
+      return;
+    }
 
-  //   let newValue = currentValue.replace(/\D/g, "");
+    let newValue = currentValue.replace(/\D/g, "");
 
-  //   if (e.key === "Backspace") {
-  //     newValue = newValue.slice(0, -1);
-  //   } else {
-  //     newValue += e.key;
-  //   }
+    if (e.key === "Backspace") {
+      newValue = newValue.slice(0, -1);
+    } else {
+      newValue += e.key;
+    }
 
-  //   // Limita o tamanho para evitar números muito grandes
-  //   if (newValue.length > 5) {
-  //     // Máximo 999,99%
-  //     return;
-  //   }
+    // Limita o tamanho para evitar números muito grandes
+    if (newValue.length > 5) {
+      // Máximo 999,99%
+      return;
+    }
 
-  //   setValue(newValue);
-  // };
+    setValue(newValue);
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -118,12 +133,18 @@ export const EditTourOperatorDialog = ({
       // Prepara os dados para enviar (mantém como string com vírgula)
       const updatedData = {
         ...editedTourOperator,
-        // upfrontComission: upfrontInput
-        //   ? `${upfrontInput.slice(0, -2) || "0"},${upfrontInput.slice(-2).padEnd(2, "0")}`
-        //   : "0,00",
-        // installmentComission: installmentInput
-        //   ? `${installmentInput.slice(0, -2) || "0"},${installmentInput.slice(-2).padEnd(2, "0")}`
-        //   : "0,00",
+        hostingCommissionUpfront: hostingCommissionUpfrontInput
+          ? `${hostingCommissionUpfrontInput.slice(0, -2) || "0"},${hostingCommissionUpfrontInput.slice(-2).padEnd(2, "0")}`
+          : "0,00",
+        hostingCommissionInstallment: hostingCommissionInstallmentInput
+          ? `${hostingCommissionInstallmentInput.slice(0, -2) || "0"},${hostingCommissionInstallmentInput.slice(-2).padEnd(2, "0")}`
+          : "0,00",
+        ticketCommissionUpfront: ticketCommissionUpfrontInput
+          ? `${ticketCommissionUpfrontInput.slice(0, -2) || "0"},${ticketCommissionUpfrontInput.slice(-2).padEnd(2, "0")}`
+          : "0,00",
+        ticketCommissionInstallment: ticketCommissionInstallmentInput
+          ? `${ticketCommissionInstallmentInput.slice(0, -2) || "0"},${ticketCommissionInstallmentInput.slice(-2).padEnd(2, "0")}`
+          : "0,00",
         observation: editedTourOperator.observation?.trim() || null,
       };
 
@@ -219,32 +240,66 @@ export const EditTourOperatorDialog = ({
           </div>
 
           {/* Inputs de comissão com a nova lógica */}
-          {/* <div>
-            <Label>Comissão à vista (%)</Label>
+          <div>
+            <Label>Comissão da hospedagem à vista (%)</Label>
             <Input
-              value={formatPercentage(upfrontInput)}
+              value={formatPercentage(hostingCommissionUpfrontInput)}
               onKeyDown={(e) =>
-                handlePercentageKeyDown(e, upfrontInput, setUpfrontInput)
+                handlePercentageKeyDown(
+                  e,
+                  hostingCommissionUpfrontInput,
+                  setHostingCommissionUpfrontInput,
+                )
               }
               readOnly
               inputMode="decimal"
             />
           </div>
           <div>
-            <Label>Comissão parcelada (%)</Label>
+            <Label>Comissão da hospedagem parcelada (%)</Label>
             <Input
-              value={formatPercentage(installmentInput)}
+              value={formatPercentage(hostingCommissionInstallmentInput)}
               onKeyDown={(e) =>
                 handlePercentageKeyDown(
                   e,
-                  installmentInput,
-                  setInstallmentInput,
+                  hostingCommissionInstallmentInput,
+                  setHostingCommissionInstallmentInput,
                 )
               }
               readOnly
               inputMode="decimal"
             />
-          </div> */}
+          </div>
+          <div>
+            <Label>Comissão do ingresso à vista (%)</Label>
+            <Input
+              value={formatPercentage(ticketCommissionUpfrontInput)}
+              onKeyDown={(e) =>
+                handlePercentageKeyDown(
+                  e,
+                  ticketCommissionUpfrontInput,
+                  setTicketCommissionUpfrontInput,
+                )
+              }
+              readOnly
+              inputMode="decimal"
+            />
+          </div>
+          <div>
+            <Label>Comissão do ingresso parcelado (%)</Label>
+            <Input
+              value={formatPercentage(ticketCommissionInstallmentInput)}
+              onKeyDown={(e) =>
+                handlePercentageKeyDown(
+                  e,
+                  ticketCommissionInstallmentInput,
+                  setTicketCommissionInstallmentInput,
+                )
+              }
+              readOnly
+              inputMode="decimal"
+            />
+          </div>
 
           <div className="grid w-full gap-1.5">
             <Label>Observação</Label>

@@ -36,9 +36,11 @@ interface TourOperator {
   site: string;
   login: string;
   password: string;
-  upfrontComission: number | string;
-  installmentComission: number | string;
   observation?: string | null;
+  hostingCommissionUpfront: string;
+  hostingCommissionInstallment: string;
+  ticketCommissionUpfront: string;
+  ticketCommissionInstallment: string;
 }
 
 const Operadoras = () => {
