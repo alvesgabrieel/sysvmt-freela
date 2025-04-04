@@ -150,31 +150,33 @@ model TourOperator {
 }
 
 model Sale {
-  id               Int               @id @default(autoincrement())
-  idInTourOperator Int
-  saller           Saller            @relation(fields: [sallerId], references: [id])
-  sallerId         Int
-  paymentMethod    PaymentMethodType
-  tourOperator     TourOperator      @relation(fields: [tourOperatorId], references: [id])
-  tourOperatorId   Int
-  saleDate         DateTime
-  checkIn          DateTime
-  checkOut         DateTime
-  client           Client            @relation(fields: [clientId], references: [id])
-  clientId         Int
-  ticketDiscount   Float
-  hostingDiscount  Float
-  observation      String
-  canceledSale     Boolean           @default(false)
-  companions       SaleCompanion[]
-  saleHosting      SaleHosting[]
-  saleTicket       SaleTicket[]
-  invoice          Invoice?
-  saleCashback     SaleCashback?
-  grossTotal       Float
-  totalCashback    Float
-  totalDiscount    Float
-  netTotal         Float
+  id                    Int               @id @default(autoincrement())
+  idInTourOperator      Int
+  saller                Saller            @relation(fields: [sallerId], references: [id])
+  sallerId              Int
+  paymentMethod         PaymentMethodType
+  tourOperator          TourOperator      @relation(fields: [tourOperatorId], references: [id])
+  tourOperatorId        Int
+  saleDate              DateTime
+  checkIn               DateTime
+  checkOut              DateTime
+  client                Client            @relation(fields: [clientId], references: [id])
+  clientId              Int
+  ticketDiscount        Float
+  hostingDiscount       Float
+  observation           String
+  canceledSale          Boolean           @default(false)
+  companions            SaleCompanion[]
+  saleHosting           SaleHosting[]
+  saleTicket            SaleTicket[]
+  invoice               Invoice?
+  saleCashback          SaleCashback?
+  grossTotal            Float
+  totalCashback         Float
+  totalDiscount         Float
+  netTotal              Float
+  agencyCommissionValue Float?
+  sallerCommissionValue Float?
 }
 
 model SaleCashback {

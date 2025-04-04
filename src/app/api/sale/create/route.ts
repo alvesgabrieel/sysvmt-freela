@@ -105,6 +105,57 @@ export async function POST(request: Request) {
         const grossTotal = totalHostings + totalTickets;
         const totalDiscount =
           convertNumbers.ticketDiscount + convertNumbers.hostingDiscount;
+        const netTotal = grossTotal - totalDiscount;
+
+        // >>>> Buscar a comissão do vendedor antes de criar a venda
+        const sallerCommission = await prisma.sallerCommission.findFirst({
+          where: {
+            sallerId: body.sallerId,
+            tourOperatorId: body.tourOperatorId,
+          },
+        });
+
+        //Determina a taxa da comissão
+        const commissionRate =
+          body.paymentMethod === "CREDITO"
+            ? (sallerCommission?.installmentCommission ?? 0)
+            : (sallerCommission?.upfrontCommission ?? 0);
+
+        //calcular o valor da comissão do vendedor
+        const sallerCommissionValue = netTotal * (commissionRate / 100);
+
+        // >>>> Busca comissao da agência
+        const tourOperator = await prisma.tourOperator.findUnique({
+          where: { id: body.tourOperatorId },
+        });
+
+        const totalHostingsLíquido =
+          totalHostings - convertNumbers.hostingDiscount;
+        const totalTicketsLíquido =
+          totalTickets - convertNumbers.ticketDiscount;
+
+        let agencyCommissionRateHosting = 0;
+        let agencyCommissionRateTicket = 0;
+
+        if (body.paymentMethod === "CREDITO") {
+          agencyCommissionRateHosting =
+            tourOperator?.hostingCommissionInstallment ?? 0;
+          agencyCommissionRateTicket =
+            tourOperator?.ticketCommissionInstallment ?? 0;
+        } else {
+          agencyCommissionRateHosting =
+            tourOperator?.hostingCommissionUpfront ?? 0;
+          agencyCommissionRateTicket =
+            tourOperator?.ticketCommissionUpfront ?? 0;
+        }
+
+        const agencyCommissionValueHosting =
+          totalHostingsLíquido * (agencyCommissionRateHosting / 100);
+        const agencyCommissionValueTicket =
+          totalTicketsLíquido * (agencyCommissionRateTicket / 100);
+
+        const agencyCommissionValue =
+          agencyCommissionValueHosting + agencyCommissionValueTicket;
 
         // 1. Cria a venda (netTotal NÃO inclui cashback)
         const sale = await prisma.sale.create({
@@ -123,7 +174,9 @@ export async function POST(request: Request) {
             grossTotal,
             totalCashback: 0, // Inicializado como 0
             totalDiscount,
-            netTotal: grossTotal - totalDiscount, // ✅ Não subtrai cashback
+            netTotal,
+            sallerCommissionValue,
+            agencyCommissionValue,
             companions: body.companions
               ? {
                   create: body.companions.map((comp) => ({
