@@ -2,6 +2,7 @@
 
 import { Loader } from "lucide-react";
 import { useState } from "react";
+import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ export const EditCompanionDialog = ({
       [name]: value,
     }));
   };
+
   const handleSave = async () => {
     setLoading(true);
     try {
@@ -57,18 +59,24 @@ export const EditCompanionDialog = ({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(editedCompanion),
+          body: JSON.stringify({
+            ...editedCompanion,
+            // Garante que os campos serão enviados exatamente como estão no estado
+            phone: editedCompanion.phone,
+            dateOfBirth: editedCompanion.dateOfBirth,
+          }),
         },
       );
 
       if (response.ok) {
-        onSave(editedCompanion); // Atualiza o estado no frontend
-        onClose(); // Fecha o diálogo
+        onSave(editedCompanion);
+        onClose();
         toast.success("Registro atualizado com sucesso");
       } else {
-        console.error("Erro ao atualizar acompanhante");
+        toast.error("Erro ao atualizar acompanhante");
       }
     } catch (error) {
+      toast.error("Erro ao atualizar acompanhante");
       console.error("Erro ao atualizar acompanhante:", error);
     } finally {
       setLoading(false);
@@ -92,10 +100,14 @@ export const EditCompanionDialog = ({
           </div>
           <div>
             <Label>Telefone</Label>
-            <Input
+            <IMaskInput
+              mask="(00) 00000-0000"
               name="phone"
               value={editedCompanion.phone}
-              onChange={handleChange}
+              onAccept={(value) =>
+                setEditedCompanion((prev) => ({ ...prev, phone: value }))
+              }
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div>
@@ -108,10 +120,14 @@ export const EditCompanionDialog = ({
           </div>
           <div>
             <Label>Data de nascimento</Label>
-            <Input
+            <IMaskInput
+              mask="00/00/0000"
               name="dateOfBirth"
               value={editedCompanion.dateOfBirth}
-              onChange={handleChange}
+              onAccept={(value) =>
+                setEditedCompanion((prev) => ({ ...prev, dateOfBirth: value }))
+              }
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
 

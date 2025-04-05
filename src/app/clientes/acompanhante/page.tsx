@@ -57,6 +57,7 @@ const Acompanhante = () => {
   );
 
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (companion: Companion) => {
@@ -84,7 +85,15 @@ const Acompanhante = () => {
   };
 
   useEffect(() => {
-    fetchCompanions();
+    const loadData = async () => {
+      try {
+        await fetchCompanions();
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
@@ -189,6 +198,17 @@ const Acompanhante = () => {
   const handleNextPage = () => {
     if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
+
+  if (initialLoading) {
+    return (
+      <div className="flex">
+        <Sidebar />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Loader fullScreen={false} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex">

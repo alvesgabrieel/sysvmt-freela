@@ -7,6 +7,7 @@ import {
   TrashIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
 import Loader from "@/app/components/loader";
@@ -68,6 +69,7 @@ const Cliente = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (client: Client) => {
@@ -95,9 +97,17 @@ const Cliente = () => {
   };
 
   useEffect(() => {
-    fetchClient(); // Busca tudo (paginação já está ativa por padrão)
+    const loadData = async () => {
+      try {
+        await fetchClient();
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]); // Executa apenas no mount
+  }, [currentPage]);
 
   // Busca os estados ao carregar a página
   useEffect(() => {
@@ -166,14 +176,16 @@ const Cliente = () => {
         },
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        toast.success("Cliente excluído com sucesso!");
+        toast.success(data.message || "Cliente excluído com sucesso!");
         // Atualiza a lista de ingressos após a exclusão
         setClient((prevClient) =>
           prevClient.filter((client) => client.id !== clientId),
         );
       } else {
-        toast.error("Erro ao excluir o cliente");
+        toast.error(data.message || "Erro ao excluir o cliente");
       }
     } catch (error) {
       toast.error("Erro ao excluir o cliente");
@@ -243,6 +255,17 @@ const Cliente = () => {
     if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
 
+  if (initialLoading) {
+    return (
+      <div className="flex">
+        <Sidebar />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Loader fullScreen={false} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex">
       <Sidebar />
@@ -299,12 +322,15 @@ const Cliente = () => {
                 </option>
               ))}
             </select>
-            <Input
-              type="text"
-              name="phone"
+            <IMaskInput
+              mask="(00) 00000-0000"
+              name="primaryPhone" // Corrigido para match com o estado
               placeholder="Telefone"
               value={filters.primaryPhone || ""}
-              onChange={handleFilterChange}
+              onAccept={(value) =>
+                setFilters((prev) => ({ ...prev, primaryPhone: value }))
+              }
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
             <Button
               onClick={applyFilters}
@@ -326,7 +352,9 @@ const Cliente = () => {
             <CardTitle>Clientes filtrados</CardTitle>
           </CardHeader>
           <CardContent>
-            {client.length > 0 ? (
+            {isLoading ? (
+              <Loader fullScreen={false} />
+            ) : client.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -367,7 +395,9 @@ const Cliente = () => {
                 </TableBody>
               </Table>
             ) : (
-              <Loader fullScreen={false} />
+              <div className="text-muted-foreground flex h-32 items-center justify-center">
+                Nenhum registro encontrado
+              </div>
             )}
 
             {/* Paginação Personalizada */}

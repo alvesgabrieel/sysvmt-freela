@@ -1,6 +1,8 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useEffect, useState } from "react";
+import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { fetchCitiesByState, fetchStates } from "@/services/ibge"; // Importe as funções do IBGE
+import { fetchCitiesByState, fetchStates } from "@/services/ibge";
 
 interface Client {
   id: number;
@@ -47,6 +49,7 @@ export const EditClientDialog = ({
     { id: number; sigla: string; nome: string }[]
   >([]);
   const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Busca os estados ao abrir o diálogo
   useEffect(() => {
@@ -102,13 +105,20 @@ export const EditClientDialog = ({
   };
 
   const handleSave = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch(`/api/client/update?id=${editedClient.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(editedClient),
+        body: JSON.stringify({
+          ...editedClient,
+          dateOfBirth: editedClient.dateOfBirth,
+          primaryPhone: editedClient.primaryPhone,
+          secondaryPhone: editedClient.secondaryPhone,
+          cpf: editedClient.cpf,
+        }),
       });
 
       if (response.ok) {
@@ -120,6 +130,8 @@ export const EditClientDialog = ({
       }
     } catch (error) {
       console.error("Erro ao atualizar a cliente:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -148,18 +160,26 @@ export const EditClientDialog = ({
           </div>
           <div>
             <Label>CPF</Label>
-            <Input
+            <IMaskInput
+              mask="000.000.000-00"
               name="cpf"
               value={editedClient.cpf}
-              onChange={handleChange}
+              onAccept={(value) =>
+                setEditedClient((prev) => ({ ...prev, cpf: value }))
+              }
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div>
             <Label>Data de nascimento</Label>
-            <Input
+            <IMaskInput
+              mask="00/00/0000"
               name="dateOfBirth"
               value={editedClient.dateOfBirth}
-              onChange={handleChange}
+              onAccept={(value) =>
+                setEditedClient((prev) => ({ ...prev, dateOfBirth: value }))
+              }
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div>
@@ -172,18 +192,26 @@ export const EditClientDialog = ({
           </div>
           <div>
             <Label>Telefone principal</Label>
-            <Input
+            <IMaskInput
+              mask="(00) 00000-0000"
               name="primaryPhone"
               value={editedClient.primaryPhone}
-              onChange={handleChange}
+              onAccept={(value) => {
+                setEditedClient((prev) => ({ ...prev, primaryPhone: value }));
+              }}
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div>
             <Label>Telefone secundário</Label>
-            <Input
+            <IMaskInput
+              mask="(00) 00000-0000"
               name="secondaryPhone"
               value={editedClient.secondaryPhone}
-              onChange={handleChange}
+              onAccept={(value) => {
+                setEditedClient((prev) => ({ ...prev, secondaryPhone: value }));
+              }}
+              className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
 
@@ -212,7 +240,7 @@ export const EditClientDialog = ({
               className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={!editedClient.state} // Desabilita se nenhum estado for selecionado
             >
-              <option value="">Selecione uma cidade</option>
+              <option value="">Cidade</option>
               {cities.map((city) => (
                 <option key={city.id} value={city.nome}>
                   {city.nome}
@@ -222,9 +250,15 @@ export const EditClientDialog = ({
           </div>
           <div className="flex justify-end space-x-2">
             <Button onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave} variant="outline">
-              Salvar
-            </Button>
+            {isLoading ? (
+              <Button variant="outline" disabled>
+                <Loader className="animate-spin" />
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={handleSave}>
+                Salvar
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
