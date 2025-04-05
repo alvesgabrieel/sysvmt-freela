@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -35,6 +36,7 @@ export const EditCompanionDialog = ({
   onSave,
 }: EditCompanionDialogProps) => {
   const [editedCompanion, setEditedCompanion] = useState<Companion>(companion);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -46,6 +48,7 @@ export const EditCompanionDialog = ({
     }));
   };
   const handleSave = async () => {
+    setLoading(true);
     try {
       const response = await fetch(
         `/api/companion/update?id=${editedCompanion.id}`,
@@ -67,6 +70,8 @@ export const EditCompanionDialog = ({
       }
     } catch (error) {
       console.error("Erro ao atualizar acompanhante:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -112,9 +117,15 @@ export const EditCompanionDialog = ({
 
           <div className="flex justify-end space-x-2">
             <Button onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave} variant="outline">
-              Salvar
-            </Button>
+            {loading ? (
+              <Button variant="outline" disabled>
+                <Loader className="animate-spin" />
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={handleSave}>
+                Salvar
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

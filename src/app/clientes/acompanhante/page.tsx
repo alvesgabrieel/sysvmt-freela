@@ -260,8 +260,11 @@ const Acompanhante = () => {
           <CardHeader>
             <CardTitle>Acompanhantes filtrados</CardTitle>
           </CardHeader>
+
           <CardContent>
-            {companion.length > 0 ? (
+            {isLoading ? (
+              <Loader fullScreen={false} />
+            ) : companion.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -289,7 +292,7 @@ const Acompanhante = () => {
                         <Button
                           variant="destructive"
                           size="icon"
-                          onClick={() => handleDeleteCompanion(companion.id)} // Função de exclusão
+                          onClick={() => handleDeleteCompanion(companion.id)}
                           className="ml-3"
                         >
                           <TrashIcon className="h-4 w-4" />
@@ -300,11 +303,13 @@ const Acompanhante = () => {
                 </TableBody>
               </Table>
             ) : (
-              <Loader fullScreen={false} />
+              <div className="text-muted-foreground flex h-32 items-center justify-center">
+                Nenhum registro encontrado
+              </div>
             )}
 
             {/* Paginação Personalizada */}
-            {companion.length > 0 && (
+            {!isLoading && companion.length > 0 && (
               <div className="mt-4 flex items-center justify-between">
                 <Button
                   variant="outline"
