@@ -53,7 +53,7 @@ const Hospedagem = () => {
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5); // Quantos itens por página
+  const [itemsPerPage] = useState(10); // Quantos itens por página
 
   // Adicione o estado para controlar o diálogo
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

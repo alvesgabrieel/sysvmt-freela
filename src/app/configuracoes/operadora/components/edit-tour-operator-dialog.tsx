@@ -1,6 +1,8 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useState } from "react";
+import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -76,6 +78,8 @@ export const EditTourOperatorDialog = ({
     convertInitialValue(tourOperator.ticketCommissionInstallment),
   );
 
+  const [isLoading, setIsLoading] = useState(false);
+
   // Função para formatar o valor digitado como porcentagem (0,05%, 1,23%, etc)
   const formatPercentage = (input: string): string => {
     if (!input) return "";
@@ -129,10 +133,12 @@ export const EditTourOperatorDialog = ({
   };
 
   const handleSave = async () => {
+    setIsLoading(true);
     try {
       // Prepara os dados para enviar (mantém como string com vírgula)
       const updatedData = {
         ...editedTourOperator,
+        phone: editedTourOperator.phone,
         hostingCommissionUpfront: hostingCommissionUpfrontInput
           ? `${hostingCommissionUpfrontInput.slice(0, -2) || "0"},${hostingCommissionUpfrontInput.slice(-2).padEnd(2, "0")}`
           : "0,00",
@@ -171,141 +177,177 @@ export const EditTourOperatorDialog = ({
     } catch (error) {
       console.error("Erro ao atualizar a operadora:", error);
       toast.error("Erro ao atualizar a operadora");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Editar operadora</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          {/* Campos normais (nome, telefone, etc) */}
-          <div>
-            <Label>Nome</Label>
-            <Input
-              name="name"
-              value={editedTourOperator.name}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <Label>Telefone</Label>
-            <Input
-              name="phone"
-              value={editedTourOperator.phone}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <Label>Contato</Label>
-            <Input
-              name="contact"
-              value={editedTourOperator.contact}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <Label>E-mail</Label>
-            <Input
-              name="email"
-              value={editedTourOperator.email}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <Label>Site</Label>
-            <Input
-              name="site"
-              value={editedTourOperator.site}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <Label>Login</Label>
-            <Input
-              name="login"
-              value={editedTourOperator.login}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <Label>Senha</Label>
-            <Input
-              name="password"
-              value={editedTourOperator.password}
-              onChange={handleChange}
-            />
+          {/* Primeira linha - Nome e Telefone */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Nome</Label>
+              <Input
+                name="name"
+                value={editedTourOperator.name}
+                onChange={handleChange}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>Telefone</Label>
+              <IMaskInput
+                mask="(00) 00000-0000"
+                name="phone"
+                value={editedTourOperator.phone}
+                onAccept={(value) =>
+                  setEditedTourOperator((prev) => ({ ...prev, phone: value }))
+                }
+                className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 mt-2 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
           </div>
 
-          {/* Inputs de comissão com a nova lógica */}
-          <div>
-            <Label>Comissão da hospedagem à vista (%)</Label>
-            <Input
-              value={formatPercentage(hostingCommissionUpfrontInput)}
-              onKeyDown={(e) =>
-                handlePercentageKeyDown(
-                  e,
-                  hostingCommissionUpfrontInput,
-                  setHostingCommissionUpfrontInput,
-                )
-              }
-              readOnly
-              inputMode="decimal"
-            />
-          </div>
-          <div>
-            <Label>Comissão da hospedagem parcelada (%)</Label>
-            <Input
-              value={formatPercentage(hostingCommissionInstallmentInput)}
-              onKeyDown={(e) =>
-                handlePercentageKeyDown(
-                  e,
-                  hostingCommissionInstallmentInput,
-                  setHostingCommissionInstallmentInput,
-                )
-              }
-              readOnly
-              inputMode="decimal"
-            />
-          </div>
-          <div>
-            <Label>Comissão do ingresso à vista (%)</Label>
-            <Input
-              value={formatPercentage(ticketCommissionUpfrontInput)}
-              onKeyDown={(e) =>
-                handlePercentageKeyDown(
-                  e,
-                  ticketCommissionUpfrontInput,
-                  setTicketCommissionUpfrontInput,
-                )
-              }
-              readOnly
-              inputMode="decimal"
-            />
-          </div>
-          <div>
-            <Label>Comissão do ingresso parcelado (%)</Label>
-            <Input
-              value={formatPercentage(ticketCommissionInstallmentInput)}
-              onKeyDown={(e) =>
-                handlePercentageKeyDown(
-                  e,
-                  ticketCommissionInstallmentInput,
-                  setTicketCommissionInstallmentInput,
-                )
-              }
-              readOnly
-              inputMode="decimal"
-            />
+          {/* Segunda linha - Contato e E-mail */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Contato</Label>
+              <Input
+                name="contact"
+                value={editedTourOperator.contact}
+                onChange={handleChange}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>E-mail</Label>
+              <Input
+                name="email"
+                value={editedTourOperator.email}
+                onChange={handleChange}
+                className="mt-2"
+              />
+            </div>
           </div>
 
-          <div className="grid w-full gap-1.5">
+          {/* Terceira linha - Site e Login */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Site</Label>
+              <Input
+                name="site"
+                value={editedTourOperator.site}
+                onChange={handleChange}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>Login</Label>
+              <Input
+                name="login"
+                value={editedTourOperator.login}
+                onChange={handleChange}
+                className="mt-2"
+              />
+            </div>
+          </div>
+
+          {/* Quarta linha - Senha e Observação (observação ocupa linha inteira abaixo) */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Senha</Label>
+              <Input
+                name="password"
+                value={editedTourOperator.password}
+                onChange={handleChange}
+                className="mt-2"
+              />
+            </div>
+          </div>
+
+          {/* Comissões - Dois por linha */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Comissão da hospedagem à vista (%)</Label>
+              <Input
+                value={formatPercentage(hostingCommissionUpfrontInput)}
+                onKeyDown={(e) =>
+                  handlePercentageKeyDown(
+                    e,
+                    hostingCommissionUpfrontInput,
+                    setHostingCommissionUpfrontInput,
+                  )
+                }
+                readOnly
+                inputMode="decimal"
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>Comissão da hospedagem parcelada (%)</Label>
+              <Input
+                value={formatPercentage(hostingCommissionInstallmentInput)}
+                onKeyDown={(e) =>
+                  handlePercentageKeyDown(
+                    e,
+                    hostingCommissionInstallmentInput,
+                    setHostingCommissionInstallmentInput,
+                  )
+                }
+                readOnly
+                inputMode="decimal"
+                className="mt-2"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Comissão do ingresso à vista (%)</Label>
+              <Input
+                value={formatPercentage(ticketCommissionUpfrontInput)}
+                onKeyDown={(e) =>
+                  handlePercentageKeyDown(
+                    e,
+                    ticketCommissionUpfrontInput,
+                    setTicketCommissionUpfrontInput,
+                  )
+                }
+                readOnly
+                inputMode="decimal"
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>Comissão do ingresso parcelado (%)</Label>
+              <Input
+                value={formatPercentage(ticketCommissionInstallmentInput)}
+                onKeyDown={(e) =>
+                  handlePercentageKeyDown(
+                    e,
+                    ticketCommissionInstallmentInput,
+                    setTicketCommissionInstallmentInput,
+                  )
+                }
+                readOnly
+                inputMode="decimal"
+                className="mt-2"
+              />
+            </div>
+          </div>
+
+          {/* Observação - Ocupa linha inteira */}
+          <div className="w-full">
             <Label>Observação</Label>
             <textarea
               name="observation"
-              className="w-full rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-2 w-full rounded-md border bg-[#e5e5e5]/30 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={4}
               value={editedTourOperator.observation ?? ""}
               onChange={handleChange}
@@ -314,9 +356,15 @@ export const EditTourOperatorDialog = ({
 
           <div className="flex justify-end space-x-2">
             <Button onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave} variant="outline">
-              Salvar
-            </Button>
+            {isLoading ? (
+              <Button onClick={handleSave} variant="outline" disabled>
+                <Loader className="animate-spin" />
+              </Button>
+            ) : (
+              <Button onClick={handleSave} variant="outline">
+                Salvar
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

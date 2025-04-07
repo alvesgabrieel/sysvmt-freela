@@ -145,11 +145,8 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
       }),
     });
 
-    console.log(`Antes do response.ok: ${response}`);
-
     if (response.ok) {
       const result = await response.json();
-      console.log(`Depois do response.ok (result): ${result}`);
       onAddTourOperator(result.tourOperator);
       toast.success(result.message);
       setIsOpen(false);
@@ -207,7 +204,7 @@ const RegisterTourOperatorDialog: React.FC<RegisterTourOperatorProps> = ({
             </Label>
             <IMaskInput
               id="telefone"
-              mask="(00) 0000-0000" // Máscara para telefone
+              mask="(00) 00000-0000"
               className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring ml-[76px] flex h-10 w-[598px]  rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={phone}
               onAccept={(value) => setPhone(value)}

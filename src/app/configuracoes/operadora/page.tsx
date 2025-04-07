@@ -7,6 +7,7 @@ import {
   TrashIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
 import Loader from "@/app/components/loader";
@@ -60,10 +61,11 @@ const Operadoras = () => {
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5); // Quantos itens por página
+  const [itemsPerPage] = useState(10); // Quantos itens por página
   const [totalPages, setTotalPages] = useState(1);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (toutOperator: TourOperator) => {
@@ -96,15 +98,29 @@ const Operadoras = () => {
   };
 
   useEffect(() => {
-    fetchTourOperators();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]);
+    const loadData = async () => {
+      try {
+        await fetchTourOperators({ filters, page: currentPage });
+      } finally {
+        setInitialLoading(false);
+      }
+    };
 
-  const fetchTourOperators = async () => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchTourOperators = async ({
+    filters: customFilters = filters,
+    page = currentPage,
+  }: {
+    filters?: typeof filters;
+    page?: number;
+  }) => {
     try {
       const queryParams = new URLSearchParams({
-        ...filters,
-        page: currentPage.toString(),
+        ...customFilters,
+        page: page.toString(),
         itemsPerPage: itemsPerPage.toString(),
       }).toString();
 
@@ -184,7 +200,7 @@ const Operadoras = () => {
       };
       setFilters(cleanedFilters); // Atualiza os filtros
       setCurrentPage(1); // Reseta para a primeira página após filtro
-      await fetchTourOperators(); // Busca os tickets com os filtros aplicados
+      await fetchTourOperators({ filters: cleanedFilters, page: 1 }); // Busca os tickets com os filtros aplicados
     } finally {
       setIsLoading(false);
     }
@@ -194,18 +210,27 @@ const Operadoras = () => {
   // 2. Funções de paginação - IMPORTANTE: atualize o estado PRIMEIRO
   const handlePageChange = (page: number) => {
     setCurrentPage(page); // Atualiza a página primeiro
-    fetchTourOperators();
+    fetchTourOperators({ filters, page }); // Busca os dados da nova página
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1); // Atualiza o estado primeiro
-    }
+    if (currentPage > 1) handlePageChange(currentPage - 1);
   };
 
   const handleNextPage = () => {
     if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
+
+  if (initialLoading) {
+    return (
+      <div className="flex">
+        <Sidebar />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Loader fullScreen={false} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex">
@@ -235,12 +260,15 @@ const Operadoras = () => {
               value={filters.contact || ""}
               onChange={handleFilterChange}
             />
-            <Input
-              type="text"
+            <IMaskInput
+              mask="(00) 00000-0000"
               name="phone"
               placeholder="Telefone"
               value={filters.phone || ""}
-              onChange={handleFilterChange}
+              onAccept={(value) =>
+                setFilters((prev) => ({ ...prev, phone: value }))
+              }
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
             <Input
               type="text"
@@ -276,7 +304,9 @@ const Operadoras = () => {
             <CardTitle>Operadoras Filtradas</CardTitle>
           </CardHeader>
           <CardContent>
-            {tourOperators && tourOperators.length > 0 ? (
+            {isLoading ? (
+              <Loader fullScreen={false} />
+            ) : tourOperators.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -321,8 +351,11 @@ const Operadoras = () => {
                 </TableBody>
               </Table>
             ) : (
-              <Loader fullScreen={false} />
+              <div className="text-muted-foreground flex h-32 items-center justify-center">
+                Nenhum registro encontrado
+              </div>
             )}
+
             {/* Paginação Personalizada */}
             {tourOperators.length > 0 && (
               <div className="mt-4 flex items-center justify-between">
