@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -40,6 +41,8 @@ export const EditTicketDialog = ({
     { id: number; sigla: string; nome: string }[]
   >([]);
   const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
+
+  const [isLoading, setIsLoading] = useState(false);
 
   // Busca os estados ao abrir o diálogo
   useEffect(() => {
@@ -96,6 +99,7 @@ export const EditTicketDialog = ({
 
   const handleSave = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch(`/api/ticket/update?id=${editedTicket.id}`, {
         method: "PUT",
         headers: {
@@ -113,6 +117,8 @@ export const EditTicketDialog = ({
       }
     } catch (error) {
       console.error("Erro ao atualizar o ingresso:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -174,9 +180,15 @@ export const EditTicketDialog = ({
           </div>
           <div className="flex justify-end space-x-2">
             <Button onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave} variant="outline">
-              Salvar
-            </Button>
+            {isLoading ? (
+              <Button onClick={handleSave} variant="outline" disabled>
+                <Loader />
+              </Button>
+            ) : (
+              <Button onClick={handleSave} variant="outline">
+                Salvar
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

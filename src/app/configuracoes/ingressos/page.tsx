@@ -54,7 +54,7 @@ const Ingressos = () => {
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5); // Quantos itens por página
+  const [itemsPerPage] = useState(10); // Quantos itens por página
   const [totalPages, setTotalPages] = useState(1);
 
   // Adicione o estado para controlar o diálogo
@@ -62,6 +62,7 @@ const Ingressos = () => {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (ticket: Ticket) => {
@@ -89,9 +90,17 @@ const Ingressos = () => {
   };
 
   useEffect(() => {
-    fetchTickets(); // Busca tudo (paginação já está ativa por padrão)
+    const loadData = async () => {
+      try {
+        await fetchTickets({ filters, page: currentPage });
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]); // Executa apenas no mount
+  }, []);
 
   // Busca os estados ao carregar a página
   useEffect(() => {
@@ -124,11 +133,17 @@ const Ingressos = () => {
   };
 
   // Função para buscar tickets com base nos filtros
-  const fetchTickets = async () => {
+  const fetchTickets = async ({
+    filters: customFilters = filters,
+    page = currentPage,
+  }: {
+    filters?: typeof filters;
+    page?: number;
+  }) => {
     try {
       const queryParams = new URLSearchParams({
-        ...filters,
-        page: currentPage.toString(),
+        ...customFilters,
+        page: page.toString(),
         itemsPerPage: itemsPerPage.toString(),
       }).toString();
 
@@ -209,30 +224,39 @@ const Ingressos = () => {
         ),
       };
 
-      setFilters(cleanedFilters); // Atualiza os filtros
-      setCurrentPage(1); // Reseta para a primeira página após filtro
-      await fetchTickets(); // Busca os tickets com os filtros aplicados
+      setFilters(cleanedFilters);
+      setCurrentPage(1);
+
+      await fetchTickets({ filters: cleanedFilters, page: 1 });
     } finally {
       setIsLoading(false);
     }
   };
 
   // Funções de navegação de página
-  // 2. Funções de paginação - IMPORTANTE: atualize o estado PRIMEIRO
   const handlePageChange = (page: number) => {
-    setCurrentPage(page); // Atualiza a página primeiro
-    fetchTickets();
+    setCurrentPage(page);
+    fetchTickets({ filters, page });
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1); // Atualiza o estado primeiro
-    }
+    if (currentPage > 1) handlePageChange(currentPage - 1);
   };
 
   const handleNextPage = () => {
     if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
+
+  if (initialLoading) {
+    return (
+      <div className="flex">
+        <Sidebar />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Loader fullScreen={false} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex">
@@ -310,7 +334,9 @@ const Ingressos = () => {
             <CardTitle>Ingressos Filtrados</CardTitle>
           </CardHeader>
           <CardContent>
-            {tickets.length > 0 ? (
+            {isLoading ? (
+              <Loader fullScreen={false} />
+            ) : tickets.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -349,7 +375,9 @@ const Ingressos = () => {
                 </TableBody>
               </Table>
             ) : (
-              <Loader fullScreen={false} />
+              <div className="text-muted-foreground flex h-32 items-center justify-center">
+                Nenhum registro encontrado
+              </div>
             )}
 
             {/* Paginação Personalizada */}
