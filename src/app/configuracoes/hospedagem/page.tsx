@@ -62,6 +62,7 @@ const Hospedagem = () => {
   const [totalPages, setTotalPages] = useState(1);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (hosting: Hosting) => {
@@ -89,9 +90,17 @@ const Hospedagem = () => {
   };
 
   useEffect(() => {
-    fetchHosting(); // Busca tudo (paginação já está ativa por padrão)
+    const loadData = async () => {
+      try {
+        await fetchHosting({ filters, page: currentPage });
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]); // Executa apenas no mount
+  }, []);
 
   // Busca os estados ao carregar a página
   useEffect(() => {
@@ -123,11 +132,17 @@ const Hospedagem = () => {
     }
   };
 
-  const fetchHosting = async () => {
+  const fetchHosting = async ({
+    filters: customFilters = filters,
+    page = currentPage,
+  }: {
+    filters?: typeof filters;
+    page?: number;
+  }) => {
     try {
       const queryParams = new URLSearchParams({
-        ...filters,
-        page: currentPage.toString(),
+        ...customFilters,
+        page: page.toString(),
         itemsPerPage: itemsPerPage.toString(),
       }).toString();
 
@@ -210,7 +225,7 @@ const Hospedagem = () => {
 
       setFilters(cleanedFilters); // Atualiza os filtros
       setCurrentPage(1); // Reseta para a primeira página após filtro
-      await fetchHosting(); // Busca os tickets com os filtros aplicados
+      await fetchHosting({ filters: cleanedFilters, page: 1 }); // Busca os tickets com os filtros aplicados
     } finally {
       setIsLoading(false);
     }
@@ -219,18 +234,27 @@ const Hospedagem = () => {
   // Funções de navegação de página
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    fetchHosting(); // Busca os tickets para a nova página
+    fetchHosting({ filters, page }); // Busca os tickets para a nova página
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1); // Atualiza o estado primeiro
-    }
+    if (currentPage > 1) handlePageChange(currentPage - 1);
   };
 
   const handleNextPage = () => {
     if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
+
+  if (initialLoading) {
+    return (
+      <div className="flex">
+        <Sidebar />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Loader fullScreen={false} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex">
@@ -307,7 +331,9 @@ const Hospedagem = () => {
             <CardTitle>Hospedagens Filtrados</CardTitle>
           </CardHeader>
           <CardContent>
-            {hosting.length > 0 ? (
+            {isLoading ? (
+              <Loader fullScreen={false} />
+            ) : hosting.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -346,7 +372,9 @@ const Hospedagem = () => {
                 </TableBody>
               </Table>
             ) : (
-              <Loader fullScreen={false} />
+              <div className="text-muted-foreground flex h-32 items-center justify-center">
+                Nenhum registro encontrado
+              </div>
             )}
 
             {/* Paginação Personalizada */}
