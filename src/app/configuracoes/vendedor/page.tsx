@@ -73,18 +73,23 @@ const Vendedores = () => {
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5); // Quantos itens por página
+  const [itemsPerPage] = useState(10); // Quantos itens por página
   const [totalPages, setTotalPages] = useState(1);
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSaller, setSelectedSaller] = useState<Saller | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (saller: Saller) => {
-    setSelectedSaller(saller); // Define o vendedor selecionado
-    setIsEditDialogOpen(true); // Abre o diálogo
+    // Busca o vendedor atualizado da lista principal
+    const updatedSaller = sallers.find((s) => s.id === saller.id) || saller;
+    setSelectedSaller(updatedSaller); // Usa o vendedor atualizado
+    setIsEditDialogOpen(true);
   };
 
   // Função para fechar o diálogo e limpar o estado
@@ -94,12 +99,14 @@ const Vendedores = () => {
   };
 
   // Função para salvar as alterações
-  const handleSaveSaller = (updatedSaller: Saller) => {
-    setSallers((prevSallers) =>
-      prevSallers.map((saller) =>
-        saller.id === updatedSaller.id ? updatedSaller : saller,
-      ),
+  const handleSaveSaller = async (updatedSaller: Saller) => {
+    // Atualiza o estado local imediatamente para uma resposta rápida
+    setSallers((prev) =>
+      prev.map((s) => (s.id === updatedSaller.id ? updatedSaller : s)),
     );
+
+    // Força uma recarga dos dados do servidor para garantir sincronização
+    setRefreshKey((prev) => prev + 1);
   };
 
   const handleAddSaller = (newSaller: Saller) => {
@@ -107,9 +114,16 @@ const Vendedores = () => {
   };
 
   useEffect(() => {
-    fetchSallers(); // Busca tudo (paginação já está ativa por padrão)
+    const loadData = async () => {
+      try {
+        await fetchSallers({ filters, page: currentPage });
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]); // Executa apenas no mount
+  }, [refreshKey, currentPage]);
 
   // Buscar estados ao carregar a página
   useEffect(() => {
@@ -141,11 +155,17 @@ const Vendedores = () => {
   };
 
   // Função para buscar vendedores com base nos filtros
-  const fetchSallers = async () => {
+  const fetchSallers = async ({
+    filters: customFilters = filters,
+    page = currentPage,
+  }: {
+    filters?: typeof filters;
+    page?: number;
+  }) => {
     try {
       const queryParams = new URLSearchParams({
-        ...filters,
-        page: currentPage.toString(),
+        ...customFilters,
+        page: page.toString(),
         itemsPerPage: itemsPerPage.toString(),
       }).toString();
 
@@ -158,7 +178,7 @@ const Vendedores = () => {
 
       if (response.ok) {
         const result = await response.json();
-        console.log("Dados brutos da API:", result); // Adicione para debug
+        // console.log("Dados brutos da API:", result); // Adicione para debug
 
         // Garante que todos os campos estejam presentes
         const sallersWithDefaults = result.sallers.map((saller: Saller) => ({
@@ -181,7 +201,7 @@ const Vendedores = () => {
         }));
 
         setSallers(sallersWithDefaults);
-        setTotalPages(result.totalPages); // >>> veririficar
+        setTotalPages(result.totalPages);
       } else {
         toast.error("Erro ao carregar os vendedores");
       }
@@ -251,30 +271,38 @@ const Vendedores = () => {
           Object.entries(filters).filter(([_, value]) => value !== ""),
         ),
       };
-      setFilters(cleanedFilters); // Atualiza os filtros
-      setCurrentPage(1); // Reseta para a primeira página após filtro
-      await fetchSallers(); // Busca os tickets com os filtros aplicados
+      setFilters(cleanedFilters);
+      setCurrentPage(1);
+      await fetchSallers({ filters: cleanedFilters, page: 1 });
     } finally {
       setIsLoading(false);
     }
   };
 
   // Funções de navegação de página
-  // 2. Funções de paginação - IMPORTANTE: atualize o estado PRIMEIRO
   const handlePageChange = (page: number) => {
-    setCurrentPage(page); // Atualiza a página primeiro
-    fetchSallers();
+    setCurrentPage(page);
+    fetchSallers({ filters, page });
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1); // Atualiza o estado primeiro
-    }
+    if (currentPage > 1) handlePageChange(currentPage - 1);
   };
 
   const handleNextPage = () => {
     if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
+
+  if (initialLoading) {
+    return (
+      <div className="flex">
+        <Sidebar />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Loader fullScreen={false} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex">
@@ -369,7 +397,9 @@ const Vendedores = () => {
             <CardTitle>Vendedores Filtrados</CardTitle>
           </CardHeader>
           <CardContent>
-            {sallers && sallers.length > 0 ? (
+            {isLoading ? (
+              <Loader fullScreen={false} />
+            ) : sallers.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -414,7 +444,9 @@ const Vendedores = () => {
                 </TableBody>
               </Table>
             ) : (
-              <Loader fullScreen={false} />
+              <div className="text-muted-foreground flex h-32 items-center justify-center">
+                Nenhum registro encontrado
+              </div>
             )}
 
             {/* Paginação Personalizada */}

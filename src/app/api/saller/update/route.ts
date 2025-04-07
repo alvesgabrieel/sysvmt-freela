@@ -34,7 +34,6 @@ export async function PUT(request: Request) {
     const rg = formData.get("rg") as string;
     const observation = formData.get("observation") as string;
     const pix = formData.get("pix") as string;
-    const photo = formData.get("photo") as File;
     const state = formData.get("state") as string;
     const city = formData.get("city") as string;
     const adress = formData.get("adress") as string;
@@ -90,22 +89,10 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Verifica se a foto é válida
-    let photoBuffer = null;
-    if (photo) {
-      if (photo.size > 5 * 1024 * 1024) {
-        return NextResponse.json(
-          { error: "O arquivo é muito grande. Tamanho máximo: 5 MB." },
-          { status: 400 },
-        );
-      }
-      photoBuffer = await photo.arrayBuffer();
-    }
-
     // Transaction para atualização atômica
     const result = await db.$transaction(async (prisma) => {
       // 1. Atualiza o vendedor
-      const updatedSaller = await prisma.saller.update({
+      await prisma.saller.update({
         where: { id: Number(id) },
         data: {
           name,
@@ -116,7 +103,6 @@ export async function PUT(request: Request) {
           rg,
           observation,
           pix,
-          photo: photoBuffer ? Buffer.from(photoBuffer) : undefined,
           state,
           city,
           adress,
@@ -132,7 +118,7 @@ export async function PUT(request: Request) {
         // 2.1. Remove comissões não enviadas (opcional)
         await prisma.sallerCommission.deleteMany({
           where: {
-            sallerId: updatedSaller.id,
+            sallerId: Number(id),
             NOT: { tourOperatorId: { in: sentTourOperatorIds } },
           },
         });
@@ -148,7 +134,7 @@ export async function PUT(request: Request) {
             // Verifica se a comissão já existe
             const existingCommission = await prisma.sallerCommission.findFirst({
               where: {
-                sallerId: updatedSaller.id,
+                sallerId: Number(id),
                 tourOperatorId: Number(c.operadora),
               },
             });
@@ -161,7 +147,7 @@ export async function PUT(request: Request) {
             } else {
               await prisma.sallerCommission.create({
                 data: {
-                  sallerId: updatedSaller.id,
+                  sallerId: Number(id),
                   tourOperatorId: Number(c.operadora),
                   ...commissionData,
                 },
@@ -171,11 +157,53 @@ export async function PUT(request: Request) {
         );
       }
 
-      return updatedSaller;
+      // 3. Retorna o vendedor com todas as relações atualizadas
+      return await prisma.saller.findUnique({
+        where: { id: Number(id) },
+        include: {
+          commissions: {
+            include: {
+              tourOperator: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      });
     });
 
+    // Formata a resposta para o frontend
+    const formattedSaller = {
+      id: result?.id,
+      name: result?.name,
+      login: result?.login,
+      email: result?.email,
+      phone: result?.phone,
+      cpf: result?.cpf,
+      rg: result?.rg,
+      observation: result?.observation,
+      pix: result?.pix,
+      state: result?.state,
+      city: result?.city,
+      adress: result?.adress,
+      number: result?.number,
+      complement: result?.complement,
+      commissions: result?.commissions.map((c) => ({
+        id: c.id,
+        tourOperatorId: c.tourOperatorId,
+        tourOperatorName: c.tourOperator.name,
+        upfrontCommission: c.upfrontCommission,
+        installmentCommission: c.installmentCommission,
+      })),
+    };
+
     return NextResponse.json(
-      { message: "Vendedor atualizado com sucesso.", saller: result },
+      {
+        message: "Vendedor atualizado com sucesso.",
+        saller: formattedSaller,
+      },
       { status: 200 },
     );
   } catch (error) {

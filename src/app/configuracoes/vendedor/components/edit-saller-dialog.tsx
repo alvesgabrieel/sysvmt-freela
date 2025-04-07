@@ -1,7 +1,8 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
+import { Loader, Minus, Plus } from "lucide-react";
 import { KeyboardEvent, useEffect, useState } from "react";
+import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,8 @@ export const EditSallerDialog = ({
   >([]);
   const [activeTab, setActiveTab] = useState("dados-basicos");
 
+  const [isLoading, setIsLoading] = useState(false);
+
   // Carrega estados e operadoras
   useEffect(() => {
     const loadData = async () => {
@@ -91,16 +94,15 @@ export const EditSallerDialog = ({
 
   // Carrega cidades quando estado é selecionado
   useEffect(() => {
-    if (saller.state) {
+    if (isOpen && saller.state && states.length) {
       const selectedState = states.find((s) => s.nome === saller.state);
       if (selectedState) {
         handleStateChange(selectedState.id);
       }
     }
-  }, [saller.state, states]);
+  }, [isOpen, saller.state, states]);
 
   // Carrega comissões existentes
-  // Carrega comissões existentes - VERSÃO CORRIGIDA
   useEffect(() => {
     if (saller.commissions && saller.commissions.length > 0) {
       const comissoesFormatadas = saller.commissions.map((comissao) => {
@@ -123,7 +125,7 @@ export const EditSallerDialog = ({
     } else {
       setComissoes([{ operadora: "", aVistaInput: "", parceladoInput: "" }]);
     }
-  }, [saller]);
+  }, [saller, isOpen]); // Adicione isOpen como dependência
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -227,7 +229,9 @@ export const EditSallerDialog = ({
 
   const handleSave = async () => {
     try {
+      setIsLoading(true);
       const formData = new FormData();
+      console.log("[DEBUG] Comissões que estão sendo enviadas:", comissoes);
 
       // Adiciona campos básicos
       Object.entries(editedSaller).forEach(([key, value]) => {
@@ -280,11 +284,16 @@ export const EditSallerDialog = ({
 
       if (response.ok) {
         const updatedSaller = await response.json();
-        setEditedSaller((prev) => ({
-          ...prev,
+        console.log("[DEBUG] Resposta da API:", updatedSaller);
+        setEditedSaller({
+          ...updatedSaller.saller,
           commissions: updatedSaller.saller.commissions || [],
-        }));
-        onSave(updatedSaller.saller);
+        });
+        onSave({
+          ...editedSaller,
+          ...updatedSaller.saller,
+          commissions: updatedSaller.saller.commissions || [],
+        });
         onClose();
         toast.success("Vendedor atualizado com sucesso!");
       } else {
@@ -292,8 +301,10 @@ export const EditSallerDialog = ({
         toast.error(error.message || "Erro ao atualizar vendedor");
       }
     } catch (error) {
-      console.error("Erro ao atualizar o vendedor:", error);
+      console.error("[DEBUG] Erro ao salvar:", error); // 👈 Adicione este log
       toast.error("Erro ao atualizar vendedor");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -356,26 +367,38 @@ export const EditSallerDialog = ({
               </div>
               <div>
                 <Label>Telefone</Label>
-                <Input
+                <IMaskInput
+                  mask="(00) 00000-0000"
                   name="phone"
                   value={editedSaller.phone}
-                  onChange={handleChange}
+                  onAccept={(value) =>
+                    setEditedSaller((prev) => ({ ...prev, phone: value }))
+                  }
+                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
               <div>
                 <Label>CPF</Label>
-                <Input
+                <IMaskInput
+                  mask="000.000.000-00"
                   name="cpf"
                   value={editedSaller.cpf}
-                  onChange={handleChange}
+                  onAccept={(value) =>
+                    setEditedSaller((prev) => ({ ...prev, cpf: value }))
+                  }
+                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
               <div>
                 <Label>RG</Label>
-                <Input
+                <IMaskInput
+                  mask="000.000.000"
                   name="rg"
                   value={editedSaller.rg}
-                  onChange={handleChange}
+                  onAccept={(value) =>
+                    setEditedSaller((prev) => ({ ...prev, rg: value }))
+                  }
+                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
               <div>
@@ -392,7 +415,7 @@ export const EditSallerDialog = ({
                   name="state"
                   value={editedSaller.state}
                   onChange={handleChange}
-                  className="w-full rounded-md border p-2"
+                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="">Selecione um estado</option>
                   {states.map((state) => (
@@ -408,7 +431,7 @@ export const EditSallerDialog = ({
                   name="city"
                   value={editedSaller.city}
                   onChange={handleChange}
-                  className="w-full rounded-md border p-2"
+                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={!editedSaller.state}
                 >
                   <option value="">Selecione uma cidade</option>
@@ -449,7 +472,7 @@ export const EditSallerDialog = ({
                   name="observation"
                   value={editedSaller.observation || ""}
                   onChange={(e) => handleChange(e)}
-                  className="w-full rounded-md border p-2"
+                  className="ring-offset-background w-full rounded-md border bg-[#e5e5e5]/30 p-2 "
                   rows={3}
                 />
               </div>
@@ -460,7 +483,10 @@ export const EditSallerDialog = ({
         {activeTab === "comissoes" && (
           <div className="space-y-4">
             {comissoes.map((comissao, index) => (
-              <div key={index} className="mb-4 flex items-center gap-4">
+              <div
+                key={comissao.id ?? `comissao-${index}`}
+                className="mb-4 flex items-center gap-4"
+              >
                 <div className="flex-1">
                   <Label>Operadora</Label>
                   <select
@@ -541,7 +567,15 @@ export const EditSallerDialog = ({
           <Button onClick={onClose} variant="outline">
             Cancelar
           </Button>
-          <Button onClick={handleSave}>Salvar Alterações</Button>
+          {isLoading ? (
+            <Button variant="outline" disabled>
+              <Loader className="animate-spin" />
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={handleSave}>
+              Salvar
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
