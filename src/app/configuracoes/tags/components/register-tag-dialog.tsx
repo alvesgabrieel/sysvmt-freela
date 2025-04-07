@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -25,28 +26,33 @@ const RegisterTagDialog: React.FC<RegisterTagDialogProps> = ({
   const [name, setName] = useState("");
   const [color, setColor] = useState("#000000");
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+    try {
+      e.preventDefault();
+      setIsLoading(true);
 
-    const response = await fetch("/api/tag/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, color }),
-    });
+      const response = await fetch("/api/tag/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, color }),
+      });
 
-    if (response.ok) {
-      const result = await response.json();
-      toast.success(result.message);
-      onTagCreated(result.tag);
-      setIsOpen(false);
-      setName("");
-      setColor("#000000");
-    } else {
-      const error = await response.json();
-      toast.error(error.message);
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message);
+        onTagCreated(result.tag);
+        setIsOpen(false);
+        setName("");
+        setColor("#000000");
+      }
+    } catch {
+      toast.error("Erro ao cadastrar tag");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -99,9 +105,15 @@ const RegisterTagDialog: React.FC<RegisterTagDialogProps> = ({
           </div>
 
           <DialogFooter className="justify-end">
-            <Button type="submit" variant="outline">
-              Cadastrar tag
-            </Button>
+            {isLoading ? (
+              <Button type="submit" variant="outline" disabled>
+                <Loader />
+              </Button>
+            ) : (
+              <Button type="submit" variant="outline">
+                Cadastrar tag
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

@@ -33,6 +33,8 @@ const Tags = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<Tag | null>(null);
 
+  const [initialLoading, setInitialLoading] = useState(true);
+
   // Função para abrir o diálogo de edição
   const handleViewMore = (tag: Tag) => {
     setSelectedTag(tag); // Define o ingresso selecionado
@@ -75,6 +77,8 @@ const Tags = () => {
       } catch (Err) {
         toast.error("Erro ao carregar as tags");
         console.error("Erro ao carregar as tags", Err);
+      } finally {
+        setInitialLoading(false);
       }
     };
     fetchTags();
@@ -101,6 +105,17 @@ const Tags = () => {
       console.error("Erro ao excluir a tag:", error);
     }
   };
+
+  if (initialLoading) {
+    return (
+      <div className="flex">
+        <Sidebar />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Loader fullScreen={false} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex">

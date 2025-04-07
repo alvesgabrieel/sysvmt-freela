@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader } from "lucide-react";
 import { useRef, useState } from "react"; // Adicione useRef
 import { toast } from "sonner";
 
@@ -16,7 +17,7 @@ import { Label } from "@/components/ui/label";
 interface Tag {
   id: number;
   name: string;
-  color: string; // Espera-se que seja um código hexadecimal (ex: #ffffff)
+  color: string;
 }
 
 interface EditTagDialogProps {
@@ -33,6 +34,7 @@ export const EditTagDialog = ({
   onSave,
 }: EditTagDialogProps) => {
   const [editedTag, setEditedTag] = useState<Tag>(tag);
+  const [isLoading, setIsLoading] = useState(false); // Estado para controlar o carregamento
   const colorInputRef = useRef<HTMLInputElement>(null); // Referência para o input de cor
 
   const handleChange = (
@@ -47,6 +49,7 @@ export const EditTagDialog = ({
 
   const handleSave = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch(`/api/tag/update?id=${editedTag.id}`, {
         method: "PUT",
         headers: {
@@ -64,6 +67,8 @@ export const EditTagDialog = ({
       }
     } catch (error) {
       console.error("Erro ao atualizar a tag:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -125,9 +130,15 @@ export const EditTagDialog = ({
 
           <div className="flex justify-end space-x-2">
             <Button onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave} variant="outline">
-              Salvar
-            </Button>
+            {isLoading ? (
+              <Button onClick={handleSave} variant="outline" disabled>
+                <Loader />
+              </Button>
+            ) : (
+              <Button onClick={handleSave} variant="outline">
+                Salvar
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
