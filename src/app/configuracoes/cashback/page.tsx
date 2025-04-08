@@ -8,6 +8,7 @@ import {
   TrashIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
 import Loader from "@/app/components/loader";
@@ -35,7 +36,6 @@ const CASHBACK_TYPE_LABELS: Record<CashbackType, string> = {
   PURCHASEDATE: "Data da Compra",
 };
 
-// Função helper para obter o label
 const getCashbackTypeLabel = (type: CashbackType): string => {
   return CASHBACK_TYPE_LABELS[type] || type;
 };
@@ -59,54 +59,44 @@ const CashbackComponent = () => {
     validityDays: "",
     selectType: "",
   });
+  const [percentageRaw, setPercentageRaw] = useState("");
 
   const [cashbacks, setCashbacks] = useState<Cashback[]>([]);
-  // const [isLoading, setIsLoading] = useState(true); // Adicionei estado de loading
-
-  // Paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5); // Quantos itens por página
+  const [itemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Adicione o estado para controlar o diálogo
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedCashback, setSelectedCashback] = useState<Cashback | null>(
     null,
   );
-
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  // Função para abrir o diálogo de edição
   const handleViewMore = (cashback: Cashback) => {
-    setSelectedCashback(cashback); // Define o ingresso selecionado
-    setIsEditDialogOpen(true); // Abre o diálogo
+    setSelectedCashback(cashback);
+    setIsEditDialogOpen(true);
   };
 
-  // Função para fechar o diálogo e limpar o estado
   const handleCloseDialog = () => {
-    setIsEditDialogOpen(false); // Fecha o diálogo
-    setSelectedCashback(null); // Limpa o ingresso selecionado
+    setIsEditDialogOpen(false);
+    setSelectedCashback(null);
   };
 
-  // Função para salvar as alterações
   const handleSaveCashback = (updatedCashback: Cashback) => {
-    console.log("Dados recebidos para atualização:", updatedCashback);
-
     setCashbacks((prevCashbacks) =>
       prevCashbacks.map((cb) =>
         cb.id === updatedCashback.id
           ? {
               ...updatedCashback,
-              // Mantém as datas no formato correto
               startDate: updatedCashback.startDate,
               endDate: updatedCashback.endDate,
             }
           : cb,
       ),
     );
-
-    setSelectedCashback(null); // Reseta o cashback selecionado
-    setIsEditDialogOpen(false); // Fecha o diálogo
+    setSelectedCashback(null);
+    setIsEditDialogOpen(false);
   };
 
   const handleAddCashback = (newCashback: Cashback) => {
@@ -114,14 +104,21 @@ const CashbackComponent = () => {
   };
 
   useEffect(() => {
-    filterCashbacks(); // Busca tudo (paginação já está ativa por padrão)
+    const loadData = async () => {
+      try {
+        await filterCashbacks({ filters, page: currentPage });
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]); // Executa apenas no mount
+  }, [currentPage]);
 
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        // setIsLoading(true);
         const response = await fetch("/api/cashback/filter", {
           method: "GET",
           headers: {
@@ -139,22 +136,22 @@ const CashbackComponent = () => {
         toast.error("Erro ao carregar os cashbacks");
         console.error("Erro ao carregar os cashbacks", err);
       }
-      // } finally {
-      //   setIsLoading(false);
-      // }
     };
 
     loadInitialData();
-  }, []); // Array vazio para executar apenas na montagem do componente
+  }, []);
 
-  const filterCashbacks = async () => {
-    // Só aplica filtros se pelo menos um campo estiver preenchido
-    // const hasFilters = Object.values(filters).some((value) => value !== "");
-
+  const filterCashbacks = async ({
+    filters: customFilters = filters,
+    page = currentPage,
+  }: {
+    filters?: typeof filters;
+    page?: number;
+  }) => {
     try {
       const queryParams = new URLSearchParams({
-        ...filters,
-        page: currentPage.toString(),
+        ...customFilters,
+        page: page.toString(),
         itemsPerPage: itemsPerPage.toString(),
       }).toString();
 
@@ -167,7 +164,6 @@ const CashbackComponent = () => {
 
       if (response.ok) {
         const result = await response.json();
-        console.log(result);
         setCashbacks(result.cashbacks || []);
         setTotalPages(result.pagination.totalPages);
       } else {
@@ -189,8 +185,7 @@ const CashbackComponent = () => {
       });
 
       if (response.ok) {
-        toast.success("Cashback com sucesso!");
-        // Atualiza a lista de cashback após a exclusão
+        toast.success("Cashback excluído com sucesso!");
         setCashbacks((prevCashback) =>
           prevCashback.filter((cashback) => cashback.id !== cashbackId),
         );
@@ -203,55 +198,73 @@ const CashbackComponent = () => {
     }
   };
 
+  const handlePercentageKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (!/[0-9]|Backspace/.test(e.key)) {
+      e.preventDefault();
+      return;
+    }
+
+    let newValue = percentageRaw.replace(/\D/g, "");
+
+    if (e.key === "Backspace") {
+      newValue = newValue.slice(0, -1);
+    } else {
+      newValue += e.key;
+    }
+
+    if (newValue.length > 5) return;
+    setPercentageRaw(newValue);
+  };
+
   const applyFilters = async () => {
     setIsLoading(true);
     try {
       const cleanedFilters = {
-        name: "",
-        startDate: "",
-        endDate: "",
-        percentage: "",
-        validityDays: "",
-        selectType: "",
-        ...Object.fromEntries(
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          Object.entries(filters).filter(([_, value]) => value !== ""),
-        ),
+        ...filters,
+        percentage: percentageRaw
+          ? (Number(percentageRaw) / 100).toFixed(2).replace(".", ",")
+          : "",
       };
-      setFilters(cleanedFilters); // Atualiza os filtros
-      setCurrentPage(1); // Reseta para a primeira página após filtro
-      await filterCashbacks(); // Busca os tickets com os filtros aplicados
+
+      await filterCashbacks({ filters: cleanedFilters, page: 1 });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Funções de navegação de página
-  // 2. Funções de paginação - IMPORTANTE: atualize o estado PRIMEIRO
   const handlePageChange = (page: number) => {
-    setCurrentPage(page); // Atualiza a página primeiro
-    filterCashbacks();
+    setCurrentPage(page);
+    filterCashbacks({ filters, page });
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1); // Atualiza o estado primeiro
-    }
+    if (currentPage > 1) handlePageChange(currentPage - 1);
   };
 
   const handleNextPage = () => {
     if (currentPage < totalPages) handlePageChange(currentPage + 1);
   };
 
+  if (initialLoading) {
+    return (
+      <div className="flex">
+        <Sidebar />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Loader fullScreen={false} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex">
       <Sidebar />
       <div className="flex-1 space-y-6 p-6">
-        {/* Barra de cima  */}
         <TopBar />
-
         <RegisterCashbackDialog onAddCashback={handleAddCashback} />
-        {/* Filtros */}
+
         <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
@@ -263,33 +276,39 @@ const CashbackComponent = () => {
               value={filters.name}
               onChange={(e) => setFilters({ ...filters, name: e.target.value })}
             />
-            <Input
-              type="text"
+            <IMaskInput
+              mask="00/00/0000"
               placeholder="Data inicial da vigência"
               value={filters.startDate}
-              onChange={(e) =>
-                setFilters({ ...filters, startDate: e.target.value })
+              onAccept={(value) =>
+                setFilters((prev) => ({ ...prev, startDate: value }))
               }
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
-            <Input
-              type="text"
+            <IMaskInput
+              mask="00/00/0000"
               placeholder="Data final da vigência"
               value={filters.endDate}
-              onChange={(e) =>
-                setFilters({ ...filters, endDate: e.target.value })
+              onAccept={(value) =>
+                setFilters((prev) => ({ ...prev, endDate: value }))
               }
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
             <Input
               type="text"
-              placeholder="Percentual"
-              value={filters.percentage}
-              onChange={(e) =>
-                setFilters({ ...filters, percentage: e.target.value })
+              placeholder="Percentual (%)"
+              value={
+                percentageRaw
+                  ? (Number(percentageRaw) / 100).toFixed(2).replace(".", ",") +
+                    "%"
+                  : ""
               }
+              onKeyDown={handlePercentageKeyDown}
+              onChange={() => {}}
             />
             <Input
               type="number"
-              placeholder="Validade"
+              placeholder="Validade (dias)"
               value={filters.validityDays}
               onChange={(e) =>
                 setFilters({ ...filters, validityDays: e.target.value })
@@ -316,109 +335,108 @@ const CashbackComponent = () => {
               variant="outline"
               disabled={isLoading}
             >
-              {isLoading ? (
-                <Loader className="h-4 w-4" /> // Ou qualquer outro componente de loading
-              ) : (
-                "Buscar"
-              )}
+              {isLoading ? <Loader className="h-4 w-4" /> : "Buscar"}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Tabela de Cashbacks */}
         <Card>
           <CardHeader>
             <CardTitle>Cashbacks Filtrados</CardTitle>
           </CardHeader>
           <CardContent>
-            {cashbacks && cashbacks.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Data inicial da vigência</TableHead>
-                    <TableHead>Data final da vigência</TableHead>
-                    <TableHead>Percentual</TableHead>
-                    <TableHead>Validade</TableHead>
-                    <TableHead>Tipo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cashbacks.map((cashback) => (
-                    <TableRow key={cashback.id}>
-                      <TableCell>{cashback.id}</TableCell>
-                      <TableCell>{cashback.name}</TableCell>
-                      <TableCell>
-                        {formatBackendDateToFrontend(cashback.startDate)}
-                      </TableCell>
-                      <TableCell>
-                        {formatBackendDateToFrontend(cashback.endDate)}
-                      </TableCell>
-                      <TableCell>
-                        {Number(cashback.percentage).toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </TableCell>
-                      <TableCell>{cashback.validityDays}</TableCell>
-                      <TableCell>
-                        {getCashbackTypeLabel(cashback.selectType)}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleViewMore(cashback)}
-                        >
-                          <EyeIcon className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          className="ml-3"
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => handleDeleteCashbacks(cashback.id)} // Função de exclusão
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
+            {isLoading ? (
               <Loader fullScreen={false} />
-            )}
-
-            {/* Paginação Personalizada */}
-            {cashbacks.length > 0 && (
-              <div className="mt-4 flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevPage}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeftIcon className="h-5 w-5" />
-                </Button>
-                <span>
-                  Página {currentPage} de {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronRightIcon className="h-5 w-5" />
-                </Button>
+            ) : cashbacks.length > 0 ? (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Data inicial</TableHead>
+                      <TableHead>Data final</TableHead>
+                      <TableHead>Percentual</TableHead>
+                      <TableHead>Validade</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cashbacks.map((cashback) => (
+                      <TableRow key={cashback.id}>
+                        <TableCell>{cashback.id}</TableCell>
+                        <TableCell>{cashback.name}</TableCell>
+                        <TableCell>
+                          {formatBackendDateToFrontend(cashback.startDate)}
+                        </TableCell>
+                        <TableCell>
+                          {formatBackendDateToFrontend(cashback.endDate)}
+                        </TableCell>
+                        <TableCell>
+                          {Number(cashback.percentage).toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          %
+                        </TableCell>
+                        <TableCell>{cashback.validityDays} dias</TableCell>
+                        <TableCell>
+                          {getCashbackTypeLabel(cashback.selectType)}
+                        </TableCell>
+                        <TableCell className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleViewMore(cashback)}
+                          >
+                            <EyeIcon className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => handleDeleteCashbacks(cashback.id)}
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="mt-4 flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeftIcon className="h-5 w-5" />
+                  </Button>
+                  <span>
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRightIcon className="h-5 w-5" />
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-muted-foreground flex h-32 items-center justify-center">
+                Nenhum registro encontrado
               </div>
             )}
           </CardContent>
         </Card>
+
         {selectedCashback && (
           <EditCashbackDialog
             cashback={selectedCashback}
             isOpen={isEditDialogOpen}
-            onClose={handleCloseDialog} // Fecha o diálogo e limpa o estado
+            onClose={handleCloseDialog}
             onSave={handleSaveCashback}
           />
         )}

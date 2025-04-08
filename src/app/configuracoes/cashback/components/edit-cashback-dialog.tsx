@@ -1,6 +1,7 @@
 "use client";
 
 import { CashbackType } from "@prisma/client";
+import { Loader } from "lucide-react";
 import { KeyboardEvent, useEffect, useState } from "react";
 import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
@@ -46,12 +47,21 @@ export const EditCashbackDialog = ({
   onSave,
 }: EditCashbackDialogProps) => {
   // Converte o valor inicial para o formato de digitação (remove vírgula e símbolo %)
-  const convertInitialValue = (value: string | number): string => {
-    if (typeof value === "number") {
-      // Converte número para string e remove o ponto decimal
-      return String(value).replace(".", "").replace(/,|%/g, "");
+  const convertInitialValue = (value: unknown): string => {
+    if (typeof value !== "string") {
+      if (typeof value === "number") {
+        // Converte número (ex: 3.0) para string "3,00%"
+        value = value.toFixed(2).replace(".", ",") + "%";
+      } else {
+        value = "0,00%"; // fallback seguro
+      }
     }
-    return value.replace(/,|%/g, "").replace(".", "");
+
+    const numericValue = parseFloat(
+      (value as string).replace(/%/g, "").replace(",", "."),
+    );
+
+    return String(Math.round(numericValue * 100));
   };
 
   const [editedCashback, setEditedCashback] = useState<Cashback>({
@@ -64,17 +74,20 @@ export const EditCashbackDialog = ({
   const [percentageInput, setPercentageInput] = useState<string>(() =>
     convertInitialValue(cashback.percentage || "0"),
   );
+
+  const [loading, setLoading] = useState(false);
+
   // Função para formatar o valor digitado como porcentagem (0,05%, 1,23%, etc)
   const formatPercentage = (input: string): string => {
-    if (!input) return "";
+    if (!input) return "0,00%";
 
-    const numbers = input.replace(/\D/g, "");
-    const padded = numbers.padStart(3, "0"); // Garante pelo menos 3 dígitos (1 + 2 decimais)
-
-    const integerPart = padded.slice(0, -2) || "0";
-    const decimalPart = padded.slice(-2);
-
-    return `${integerPart},${decimalPart}%`;
+    const numericValue = parseInt(input, 10) / 100; // Converte centavos para valor decimal
+    return (
+      numericValue.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }) + "%"
+    );
   };
 
   // Função para lidar com as teclas pressionadas
@@ -134,6 +147,7 @@ export const EditCashbackDialog = ({
   }, [cashback]);
 
   const handleSave = async () => {
+    setLoading(true);
     try {
       const startDate = new Date(
         editedCashback.startDate.split("/").reverse().join("-"),
@@ -150,9 +164,9 @@ export const EditCashbackDialog = ({
       // Prepara os dados para enviar (formato esperado pelo backend)
       const payload = {
         ...editedCashback,
-        percentage: percentageInput
-          ? `${percentageInput.slice(0, -2) || "0"},${percentageInput.slice(-2).padEnd(2, "0")}`
-          : "0,00",
+        percentage: (parseInt(percentageInput, 10) / 100)
+          .toFixed(2)
+          .replace(".", ","),
         validityDays: Number(editedCashback.validityDays),
       };
 
@@ -177,8 +191,11 @@ export const EditCashbackDialog = ({
     } catch (error) {
       toast.error("Erro na conexão com o servidor");
       console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[900px]">
@@ -287,9 +304,15 @@ export const EditCashbackDialog = ({
             <Button variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="button" onClick={handleSave}>
-              Salvar
-            </Button>
+            {loading ? (
+              <Button type="button" disabled>
+                <Loader className="animate-spin" />
+              </Button>
+            ) : (
+              <Button type="button" onClick={handleSave}>
+                Salvar
+              </Button>
+            )}
           </DialogFooter>
         </div>
       </DialogContent>
