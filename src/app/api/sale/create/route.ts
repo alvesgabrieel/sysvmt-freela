@@ -107,7 +107,7 @@ export async function POST(request: Request) {
           convertNumbers.ticketDiscount + convertNumbers.hostingDiscount;
         const netTotal = grossTotal - totalDiscount;
 
-        // >>>> Buscar a comissão do vendedor antes de criar a venda
+        // Buscar a comissão do vendedor
         const sallerCommission = await prisma.sallerCommission.findFirst({
           where: {
             sallerId: body.sallerId,
@@ -115,16 +115,16 @@ export async function POST(request: Request) {
           },
         });
 
-        //Determina a taxa da comissão
+        // Determina a taxa da comissão
         const commissionRate =
           body.paymentMethod === "CREDITO"
             ? (sallerCommission?.installmentCommission ?? 0)
             : (sallerCommission?.upfrontCommission ?? 0);
 
-        //calcular o valor da comissão do vendedor
+        // Calcular o valor da comissão do vendedor
         const sallerCommissionValue = netTotal * (commissionRate / 100);
 
-        // >>>> Busca comissao da agência
+        // Busca comissao da agência
         const tourOperator = await prisma.tourOperator.findUnique({
           where: { id: body.tourOperatorId },
         });
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
         const agencyCommissionValue =
           agencyCommissionValueHosting + agencyCommissionValueTicket;
 
-        // 1. Cria a venda (netTotal NÃO inclui cashback)
+        // Cria a venda com todos os relacionamentos incluídos
         const sale = await prisma.sale.create({
           data: {
             idInTourOperator: body.idInTourOperator,
@@ -206,12 +206,31 @@ export async function POST(request: Request) {
                 }
               : undefined,
           },
+          include: {
+            tourOperator: true,
+            client: true,
+            companions: {
+              include: {
+                companion: true,
+              },
+            },
+            saleHosting: {
+              include: {
+                hosting: true,
+              },
+            },
+            saleTicket: {
+              include: {
+                ticket: true,
+              },
+            },
+          },
         });
 
         let totalCashback = 0;
         let saleCashback = null;
 
-        // 2. Lógica do Cashback (sem afetar netTotal)
+        // Lógica do Cashback
         if (body.cashbackId) {
           const cashback = await prisma.cashback.findUnique({
             where: { id: body.cashbackId },
@@ -234,14 +253,14 @@ export async function POST(request: Request) {
                 startDate = convertDates.saleDate;
             }
 
-            // 1. Calcular expiryDate garantindo horário final do dia
+            // Calcular expiryDate garantindo horário final do dia
             const expiryDate = addDays(
               new Date(startDate.setHours(23, 59, 59, 999)), // Fim do dia
               cashback.validityDays,
             );
             const status = CashbackStatus.ACTIVE;
 
-            // Calcula valor do cashback (10% de grossTotal, por exemplo)
+            // Calcula valor do cashback
             totalCashback = grossTotal * (cashback.percentage / 100);
 
             // Cria registro de SaleCashback
@@ -255,18 +274,17 @@ export async function POST(request: Request) {
               },
             });
 
-            // Atualiza APENAS totalCashback (netTotal permanece inalterado)
+            // Atualiza APENAS totalCashback
             await prisma.sale.update({
               where: { id: sale.id },
               data: {
-                totalCashback, // Armazena o valor calculado
-                // netTotal NÃO é atualizado (mantém grossTotal - totalDiscount)
+                totalCashback,
               },
             });
           }
         }
 
-        // 3. Cria nota fiscal
+        // Cria nota fiscal
         const invoice = await prisma.invoice.create({
           data: {
             saleId: sale.id,
@@ -288,7 +306,12 @@ export async function POST(request: Request) {
           },
         });
 
-        return { sale, saleCashback, invoice };
+        // Retorna a venda com todos os relacionamentos
+        return {
+          ...sale,
+          saleCashback,
+          invoice,
+        };
       },
       {
         timeout: 10000,

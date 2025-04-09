@@ -16,10 +16,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sale } from "@/types/sale";
+
+interface SallerCommission {
+  tourOperator: TourOperator;
+}
 
 interface Saller {
   id: number;
   name: string;
+  commissions: SallerCommission[]; // Adicione esta linha
 }
 
 interface TourOperator {
@@ -94,7 +100,13 @@ interface FormData {
   };
 }
 
-export default function RegisterSaleDialog() {
+interface RegisterSaleDialogProps {
+  onSaleSuccess: (newSale: Sale) => void;
+}
+
+export default function RegisterSaleDialog({
+  onSaleSuccess,
+}: RegisterSaleDialogProps) {
   const [activeTab, setActiveTab] = useState("gerais");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -135,6 +147,10 @@ export default function RegisterSaleDialog() {
   const [allTickets, setAllTickets] = useState<Ticket[]>([]);
   const [loadingTickets, setLoadingTickets] = useState(true);
 
+  const [filteredTourOperators, setFilteredTourOperators] = useState<
+    TourOperator[]
+  >([]);
+
   const [formData, setFormData] = useState<FormData>({
     idInTourOperator: "",
     sallerId: "",
@@ -146,8 +162,8 @@ export default function RegisterSaleDialog() {
     checkOut: "",
     sallerCommission: "",
     agencyCommission: "",
-    ticketDiscount: "0",
-    hostingDiscount: "0",
+    ticketDiscount: "",
+    hostingDiscount: "",
     observation: "",
     cashbackId: "",
     canceledSale: false,
@@ -175,7 +191,7 @@ export default function RegisterSaleDialog() {
   const fetchSallers = async () => {
     try {
       setLoadingSallers(true);
-      const response = await fetch("/api/saller/list");
+      const response = await fetch("/api/sale/list-with-tour-operators");
       if (!response.ok) {
         throw new Error("Erro ao carregar vendedores");
       }
@@ -299,8 +315,8 @@ export default function RegisterSaleDialog() {
       checkOut: "",
       sallerCommission: "",
       agencyCommission: "",
-      ticketDiscount: "0",
-      hostingDiscount: "0",
+      ticketDiscount: "",
+      hostingDiscount: "",
       observation: "",
       cashbackId: "",
       canceledSale: false,
@@ -660,6 +676,7 @@ export default function RegisterSaleDialog() {
       }
 
       const result = await response.json();
+      onSaleSuccess(result);
       console.log("Venda cadastrada com sucesso:", result);
       toast.success("Venda cadastrada com sucesso!");
       // Fecha o dialog e limpa os campos
@@ -761,15 +778,30 @@ export default function RegisterSaleDialog() {
                 </Label>
                 <select
                   id="vendedor"
-                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.sallerId}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    handleInputChange("sallerId", e.target.value)
-                  }
+                  className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={(e) => {
+                    const selectedSallerId = e.target.value;
+                    handleInputChange("sallerId", selectedSallerId);
+
+                    // Filtra operadoras vinculadas ao vendedor selecionado
+                    const selectedSaller = sallers.find(
+                      (s) => s.id.toString() === selectedSallerId,
+                    );
+                    const linkedOperators =
+                      selectedSaller?.commissions?.map((c) => c.tourOperator) ||
+                      [];
+
+                    setFilteredTourOperators(
+                      linkedOperators.length > 0
+                        ? linkedOperators
+                        : tourOperators,
+                    );
+                  }}
                   disabled={loadingSallers}
                 >
                   <option value="">
-                    {loadingSallers ? "Carregando..." : " "}
+                    {loadingSallers ? "Carregando..." : "Selecione"}
                   </option>
                   {sallers.map((seller) => (
                     <option key={seller.id} value={seller.id}>
@@ -812,12 +844,18 @@ export default function RegisterSaleDialog() {
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                     handleInputChange("tourOperatorId", e.target.value)
                   }
-                  disabled={loadingTourOperators}
+                  disabled={loadingTourOperators || !formData.sallerId}
                 >
                   <option value="">
-                    {loadingTourOperators ? "Carregando..." : " "}
+                    {loadingTourOperators
+                      ? "Carregando..."
+                      : !formData.sallerId
+                        ? "Selecione um vendedor primeiro"
+                        : filteredTourOperators.length === 0
+                          ? "Nenhuma operadora vinculada"
+                          : " "}
                   </option>
-                  {tourOperators.map((tourOperator) => (
+                  {filteredTourOperators.map((tourOperator) => (
                     <option key={tourOperator.id} value={tourOperator.id}>
                       {tourOperator.name}
                     </option>
@@ -1407,7 +1445,6 @@ export default function RegisterSaleDialog() {
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
             onClick={() => {
               setIsDialogOpen(false);
               limparCampos();

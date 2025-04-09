@@ -1,3 +1,4 @@
+import { subHours } from "date-fns";
 import cron from "node-cron";
 
 import { db } from "@/lib/prisma";
@@ -8,13 +9,13 @@ const runCashbackExpirationJob = () => {
   cron.schedule("0 0 * * *", async () => {
     console.log("🔄 Executando cron job: Expirando cashbacks vencidos...");
 
-    const now = new Date();
+    const now = subHours(new Date(), 3); // Força UTC-3
 
     try {
       const updatedCashbacks = await db.saleCashback.updateMany({
         where: {
           status: "ACTIVE",
-          expiryDate: { lte: now },
+          expiryDate: { lt: now },
         },
         data: { status: "EXPIRED" },
       });

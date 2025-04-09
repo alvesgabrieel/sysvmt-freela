@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react"; // Adicione esta importação
+import { useEffect, useState } from "react";
 import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
@@ -37,7 +37,7 @@ export default function EditSaleDialog({
   // Estado para o formulário de nova hospedagem
   const [newHosting, setNewHosting] = useState({
     hostingId: 0,
-    rooms: 1,
+    rooms: 0,
     price: "",
   });
 
@@ -103,8 +103,10 @@ export default function EditSaleDialog({
 
   useEffect(() => {
     if (sale) {
+      console.log("Dados da venda recebidos:", sale);
       setEditedSale({
         ...sale,
+        cashbackId: sale.saleCashback?.cashback?.id || undefined,
         saleDate: ensureDateFormat(sale.saleDate),
         checkIn: ensureDateFormat(sale.checkIn),
         checkOut: ensureDateFormat(sale.checkOut),
@@ -131,17 +133,17 @@ export default function EditSaleDialog({
   }, [sale]);
 
   const ensureDateFormat = (date: string | Date | null | undefined): string => {
-    if (!date) return "";
-    // Se já está no formato DD/MM/AAAA, retorna como está
-    if (typeof date === "string" && /^\d{2}\/\d{2}\/\d{4}$/.test(date))
-      return date;
+    if (!date || date === "") return ""; // Permite string vazia
 
-    // Se for objeto Date, converte para string ISO antes de formatar
-    const formattedDate = typeof date === "string" ? date : date.toISOString();
+    // Se já está no formato DD/MM/AAAA, retorna como está
+    if (typeof date === "string" && /^\d{2}\/\d{2}\/\d{4}$/.test(date)) {
+      return date;
+    }
+
     // Se for objeto Date ou ISO string, formata para DD/MM/AAAA
+    const formattedDate = typeof date === "string" ? date : date.toISOString();
     return formatBackendDateToFrontend(formattedDate);
   };
-
   //busca vendedores
   useEffect(() => {
     const fetchSallers = async () => {
@@ -422,6 +424,27 @@ export default function EditSaleDialog({
     }
   };
 
+  const formatCurrencyForInput = (value: string): string => {
+    // Remove tudo que não for dígito
+    let digits = value.replace(/\D/g, "");
+
+    // Adiciona zeros à esquerda se necessário para ter pelo menos 3 dígitos
+    digits = digits.padStart(3, "0");
+
+    // Formata como centavos
+    let formatted = digits.replace(/(\d{2})$/, ",$1");
+
+    // Adiciona pontos para milhares
+    formatted = formatted.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+
+    // Remove zeros à esquerda desnecessários (exceto para "0,00")
+    if (formatted.startsWith("0") && formatted.length > 4) {
+      formatted = formatted.replace(/^0+/, "");
+    }
+
+    return formatted;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
@@ -536,14 +559,26 @@ export default function EditSaleDialog({
                   mask="00/00/0000"
                   className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={
-                    typeof editedSale.saleDate === "string" &&
-                    editedSale.saleDate.includes("/")
-                      ? editedSale.saleDate
-                      : formatBackendDateToFrontend(editedSale.saleDate || "")
+                    editedSale.saleDate === ""
+                      ? ""
+                      : typeof editedSale.saleDate === "string" &&
+                          editedSale.saleDate.includes("/")
+                        ? editedSale.saleDate
+                        : formatBackendDateToFrontend(editedSale.saleDate || "")
                   }
-                  onAccept={(value) =>
-                    setEditedSale({ ...editedSale, saleDate: value })
-                  }
+                  onAccept={(value, mask) => {
+                    // Permite campo vazio
+                    if (value === "" || mask.unmaskedValue === "") {
+                      setEditedSale({ ...editedSale, saleDate: "" });
+                    } else {
+                      setEditedSale({ ...editedSale, saleDate: value });
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Backspace" && editedSale.saleDate === "") {
+                      e.preventDefault(); // Evita comportamento padrão quando já está vazio
+                    }
+                  }}
                 />
               </div>
 
@@ -640,11 +675,13 @@ export default function EditSaleDialog({
                 <Label className="text-right">Cashback</Label>
                 <select
                   className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={editedSale.cashbackId || ""}
+                  value={editedSale.cashbackId || ""} // Garanta que está usando o valor correto
                   onChange={(e) =>
                     setEditedSale({
                       ...editedSale,
-                      cashbackId: Number(e.target.value),
+                      cashbackId: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
                     })
                   }
                 >
@@ -801,7 +838,7 @@ export default function EditSaleDialog({
                   <option value="">Selecione</option>
                   {availableHostings.map((hosting) => (
                     <option key={hosting.id} value={hosting.id}>
-                      {hosting.name} - {formatCurrency(hosting.price)}
+                      {hosting.name}
                     </option>
                   ))}
                 </select>
@@ -813,30 +850,42 @@ export default function EditSaleDialog({
                   type="number"
                   className="col-span-3"
                   min="1"
-                  value={newHosting.rooms || ""}
-                  onChange={(e) =>
+                  value={newHosting.rooms === 0 ? "" : newHosting.rooms}
+                  onChange={(e) => {
+                    const value = e.target.value;
                     setNewHosting({
                       ...newHosting,
-                      rooms: Number(e.target.value),
-                    })
-                  }
+                      rooms: value === "" ? 0 : parseInt(value) || 0,
+                    });
+                  }}
                 />
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Valor</Label>
-                <IMaskInput
-                  mask={Number}
-                  scale={2}
-                  radix=","
-                  value={newHosting.price || ""}
-                  onAccept={(value) =>
+                <Input
+                  value={newHosting.price}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const digits = e.target.value.replace(/\D/g, "");
+                    const formatted = formatCurrencyForInput(digits);
                     setNewHosting({
                       ...newHosting,
-                      price: String(value),
-                    })
-                  }
-                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      price: formatted,
+                    });
+                  }}
+                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                    if (!e.target.value.includes(",")) {
+                      const formatted = formatCurrencyForInput(
+                        e.target.value + "00",
+                      );
+                      setNewHosting({
+                        ...newHosting,
+                        price: formatted,
+                      });
+                    }
+                  }}
+                  className="col-span-3"
+                  min="0"
                 />
               </div>
 
@@ -913,7 +962,7 @@ export default function EditSaleDialog({
                   <option value="0">Selecione</option>
                   {availableTickets.map((ticket) => (
                     <option key={ticket.id} value={ticket.id}>
-                      {ticket.name} - {formatCurrency(ticket.price)}
+                      {ticket.name}
                     </option>
                   ))}
                 </select>
@@ -925,13 +974,14 @@ export default function EditSaleDialog({
                   type="number"
                   className="col-span-3"
                   min="0"
-                  value={newTicket.adults}
-                  onChange={(e) =>
+                  value={newTicket.adults === 0 ? "" : newTicket.adults}
+                  onChange={(e) => {
+                    const value = e.target.value;
                     setNewTicket({
                       ...newTicket,
-                      adults: Number(e.target.value),
-                    })
-                  }
+                      adults: value === "" ? 0 : parseInt(value) || 0,
+                    });
+                  }}
                 />
               </div>
 
@@ -941,13 +991,14 @@ export default function EditSaleDialog({
                   type="number"
                   className="col-span-3"
                   min="0"
-                  value={newTicket.kids}
-                  onChange={(e) =>
+                  value={newTicket.kids === 0 ? "" : newTicket.kids}
+                  onChange={(e) => {
+                    const value = e.target.value;
                     setNewTicket({
                       ...newTicket,
-                      kids: Number(e.target.value),
-                    })
-                  }
+                      kids: value === "" ? 0 : parseInt(value) || 0,
+                    });
+                  }}
                 />
               </div>
 
@@ -957,30 +1008,46 @@ export default function EditSaleDialog({
                   type="number"
                   className="col-span-3"
                   min="0"
-                  value={newTicket.halfPriceTicket}
-                  onChange={(e) =>
+                  value={
+                    newTicket.halfPriceTicket === 0
+                      ? ""
+                      : newTicket.halfPriceTicket
+                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
                     setNewTicket({
                       ...newTicket,
-                      halfPriceTicket: Number(e.target.value),
-                    })
-                  }
+                      halfPriceTicket: value === "" ? 0 : parseInt(value) || 0,
+                    });
+                  }}
                 />
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Valor</Label>
-                <IMaskInput
-                  mask={Number}
-                  scale={2}
-                  radix=","
+                <Input
                   value={newTicket.price}
-                  onAccept={(value) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const digits = e.target.value.replace(/\D/g, "");
+                    const formatted = formatCurrencyForInput(digits);
                     setNewTicket({
                       ...newTicket,
-                      price: String(value),
-                    })
-                  }
-                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      price: formatted,
+                    });
+                  }}
+                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                    if (!e.target.value.includes(",")) {
+                      const formatted = formatCurrencyForInput(
+                        e.target.value + "00",
+                      );
+                      setNewTicket({
+                        ...newTicket,
+                        price: formatted,
+                      });
+                    }
+                  }}
+                  className="col-span-3"
+                  min="0"
                 />
               </div>
 

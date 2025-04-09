@@ -1,5 +1,24 @@
 import { PaymentMethodType } from "@prisma/client";
 
+// Adicione estas interfaces auxiliares
+export interface Cashback {
+  id: number;
+  name: string;
+  startDate: string;
+  endDate: string;
+  percentage: number;
+  validityDays: number;
+  // ... outros campos conforme necessário
+}
+
+export interface SaleCashback {
+  id: number;
+  cashback: Cashback;
+  status: string;
+  amount: number;
+  expiryDate: string;
+}
+
 export interface TourOperator {
   id: number;
   name: string;
@@ -61,7 +80,8 @@ export interface Sale {
   totalCashback: number;
   totalDiscount: number;
   netTotal: number;
-  cashbackId?: number;
+  saleCashback?: SaleCashback | null; // Adicione esta linha
+  cashbackId?: number; // Este campo pode ser mantido para compatibilidade
   paymentMethod?: PaymentMethodType;
   ticketDiscount: string;
   hostingDiscount: string;

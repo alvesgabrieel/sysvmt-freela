@@ -4,7 +4,7 @@ import { db } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const sale = await db.sale.findMany({
+    const sales = await db.sale.findMany({
       include: {
         tourOperator: true,
         companions: true,
@@ -12,15 +12,20 @@ export async function GET() {
         saleTicket: true,
         saleHosting: true,
         invoice: true,
+        saleCashback: {
+          include: {
+            cashback: true,
+          },
+        },
       },
       orderBy: {
-        id: "asc",
+        id: "desc",
       },
     });
 
-    return NextResponse.json(sale, { status: 200 });
+    return NextResponse.json(sales, { status: 200 });
   } catch (error) {
-    console.error("Erro ao buscar ingresso:", error);
+    console.error("Erro ao buscar vendas:", error);
     return NextResponse.json({ error: "Erro no servidor" }, { status: 500 });
   }
 }

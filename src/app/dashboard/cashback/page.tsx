@@ -47,11 +47,11 @@ const Cashback = () => {
         queryParams.append("clientName", filters.clientName);
 
       const response = await fetch(
-        `/api/cashback/filter-cashback-for-sale${queryParams}`,
+        `/api/cashback/filter-cashback-for-sale?${queryParams}`,
       );
       if (!response.ok) throw new Error("Erro ao buscar os dados");
 
-      const data: Sale[] = await response.json(); // Aplicando a tipagem correta
+      const data: Sale[] = await response.json();
       setSalesData(data);
     } catch (error) {
       console.error("Erro ao buscar vendas:", error);

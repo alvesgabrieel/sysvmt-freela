@@ -3,7 +3,6 @@
 import { EyeIcon, TrashIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { IMaskInput } from "react-imask";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -31,12 +30,9 @@ import RegisterSaleDialog from "./components/register-sale-dialog";
 
 export default function Dashboard() {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [tempFilters, setTempFilters] = useState({
     "Id na Operadora": "",
     checkin: "",
@@ -48,23 +44,7 @@ export default function Dashboard() {
     "total desconto": "",
     "total líquido": "",
   });
-
-  const [activeFilters, setActiveFilters] = useState(tempFilters); // Filtros aplicados
-
-  // Estado dos filtros com rótulos personalizados
-  // const [filters, setFilters] = useState({
-  //   "Id na Operadora": "",
-  //   checkin: "",
-  //   checkout: "",
-  //   operadora: "",
-  //   cliente: "",
-  //   "total bruto": "",
-  //   "total cashback": "",
-  //   "total desconto": "",
-  //   "total líquido": "",
-  // });
-
-  // Mapeamento entre rótulos exibidos e chaves reais dos dados
+  const [activeFilters, setActiveFilters] = useState(tempFilters);
   const filterKeysMap: Record<string, string> = {
     "Id na Operadora": "idInTourOperator",
     checkin: "checkIn",
@@ -76,14 +56,12 @@ export default function Dashboard() {
     "total desconto": "totalDiscount",
     "total líquido": "netTotal",
   };
-
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const router = useRouter();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-
     if (!token) {
       router.push("/signin");
     } else {
@@ -103,7 +81,6 @@ export default function Dashboard() {
 
       if (response.ok) {
         toast.success("Venda excluída com sucesso!");
-        // Atualiza a lista de cashback após a exclusão
         setSales((prevSale) => prevSale.filter((sale) => sale.id !== saleId));
       } else {
         toast.error("Erro ao excluir a venda");
@@ -138,13 +115,30 @@ export default function Dashboard() {
     }
   };
 
+  const handleNewSale = (newSale: Sale) => {
+    const formattedSale = {
+      ...newSale,
+      checkIn: formatBackendDateToFrontend(newSale.checkIn),
+      checkOut: formatBackendDateToFrontend(newSale.checkOut),
+    };
+
+    setSales((prevSales) => [formattedSale, ...prevSales]);
+    setTimeout(() => fetchSales(), 1000);
+  };
+
+  const formatDateInput = (value: string): string => {
+    const nums = value.replace(/\D/g, "");
+    if (nums.length <= 2) return nums;
+    if (nums.length <= 4) return `${nums.slice(0, 2)}/${nums.slice(2)}`;
+    return `${nums.slice(0, 2)}/${nums.slice(2, 4)}/${nums.slice(4, 8)}`;
+  };
+
   const itemsPerPage = 10;
 
   if (!isAuthenticated || loading) {
     return <Loader />;
   }
 
-  // Função auxiliar para acessar propriedades aninhadas com tipos seguros
   const getNestedValue = (obj: Sale, path: string): unknown => {
     return path.split(".").reduce((acc: unknown, part: string) => {
       if (
@@ -158,17 +152,14 @@ export default function Dashboard() {
     }, obj);
   };
 
-  // Filtra as vendas com base nos activeFilters (aplicados após clicar em "Buscar")
   const filteredSales = sales.filter((sale) =>
     Object.keys(filterKeysMap).every((displayKey) => {
       const realKey = filterKeysMap[displayKey];
       let value: unknown;
 
-      // Obtém o valor real do dado (suporta campos aninhados como "tourOperator.name")
       if (realKey.includes(".")) {
         value = getNestedValue(sale, realKey);
       } else {
-        // Acesso direto aos campos do tipo Sale
         switch (realKey) {
           case "idInTourOperator":
             value = sale.idInTourOperator;
@@ -205,10 +196,10 @@ export default function Dashboard() {
       const filterValue =
         activeFilters[displayKey as keyof typeof activeFilters];
       return (
-        filterValue === "" || // Ignora filtros vazios
+        filterValue === "" ||
         String(value ?? "")
           .toLowerCase()
-          .includes(filterValue.toLowerCase()) // Comparação case-insensitive
+          .includes(filterValue.toLowerCase())
       );
     }),
   );
@@ -217,10 +208,9 @@ export default function Dashboard() {
     if (date.length === 8) {
       return `${date.slice(0, 2)}/${date.slice(2, 4)}/${date.slice(4, 8)}`;
     }
-    return date; // Retorna como está se já estiver formatado
+    return date;
   };
 
-  // Lógica de paginação
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredSales.slice(indexOfFirstItem, indexOfLastItem);
@@ -229,92 +219,96 @@ export default function Dashboard() {
     <div className="flex">
       <Sidebar />
       <div className="flex-1 space-y-6 p-6">
-        {/* Barra de cima */}
         <TopBar />
-
-        {/* Cards de métricas */}
         <Metrics />
+        <RegisterSaleDialog onSaleSuccess={handleNewSale} />
 
-        {/* Botão para abrir o dialog para cadastrar venda */}
-        <RegisterSaleDialog />
-
-        {/* Filtros */}
         <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-5 items-end gap-4">
-            {Object.keys(tempFilters).map((displayKey) => {
-              if (displayKey === "checkin" || displayKey === "checkout") {
-                return (
-                  <IMaskInput
-                    key={displayKey}
-                    mask={Number}
-                    scale={2}
-                    thousandsSeparator="."
-                    radix=","
-                    mapToRadix={["."]}
-                    placeholder={displayKey}
-                    value={
-                      tempFilters[displayKey as keyof typeof tempFilters] || ""
-                    }
-                    onAccept={(value: string) => {
-                      setTempFilters({
-                        ...tempFilters,
-                        [displayKey]: value === "" ? "" : value, // Mantém vazio quando apagar tudo
-                      });
-                    }}
-                    onInput={(e) => {
-                      if (e.currentTarget.value === "") {
-                        setTempFilters({
-                          ...tempFilters,
-                          [displayKey]: "", // Garante que não volte para "0,00"
-                        });
-                      }
-                    }}
-                    overwrite
-                    className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                );
+            <Input
+              placeholder="Id na Operadora"
+              value={tempFilters["Id na Operadora"]}
+              onChange={(e) =>
+                setTempFilters({
+                  ...tempFilters,
+                  "Id na Operadora": e.target.value,
+                })
               }
+            />
 
-              if (
-                displayKey === "total bruto" ||
-                displayKey === "total cashback" ||
-                displayKey === "total desconto" ||
-                displayKey === "total líquido"
-              ) {
-                return (
-                  <CurrencyInput
-                    key={displayKey}
-                    placeholder={displayKey}
-                    value={tempFilters[displayKey as keyof typeof tempFilters]}
-                    onChange={(value) =>
-                      setTempFilters({
-                        ...tempFilters,
-                        [displayKey]: value,
-                      })
-                    }
-                  />
-                );
+            <Input
+              placeholder="Check-in "
+              value={tempFilters.checkin}
+              onChange={(e) =>
+                setTempFilters({
+                  ...tempFilters,
+                  checkin: formatDateInput(e.target.value),
+                })
               }
+            />
 
-              return (
-                <Input
-                  key={displayKey}
-                  placeholder={displayKey}
-                  value={tempFilters[displayKey as keyof typeof tempFilters]}
-                  onChange={(e) =>
-                    setTempFilters({
-                      ...tempFilters,
-                      [displayKey]: e.target.value,
-                    })
-                  }
-                />
-              );
-            })}
+            <Input
+              placeholder="Check-out "
+              value={tempFilters.checkout}
+              onChange={(e) =>
+                setTempFilters({
+                  ...tempFilters,
+                  checkout: formatDateInput(e.target.value),
+                })
+              }
+            />
 
-            {/* Botão Buscar alinhado na mesma linha */}
+            <Input
+              placeholder="Operadora"
+              value={tempFilters.operadora}
+              onChange={(e) =>
+                setTempFilters({ ...tempFilters, operadora: e.target.value })
+              }
+            />
+
+            <Input
+              placeholder="Cliente"
+              value={tempFilters.cliente}
+              onChange={(e) =>
+                setTempFilters({ ...tempFilters, cliente: e.target.value })
+              }
+            />
+
+            <CurrencyInput
+              placeholder="total bruto"
+              value={tempFilters["total bruto"]}
+              onChange={(value) =>
+                setTempFilters({ ...tempFilters, "total bruto": value })
+              }
+            />
+
+            <CurrencyInput
+              placeholder="total cashback"
+              value={tempFilters["total cashback"]}
+              onChange={(value) =>
+                setTempFilters({ ...tempFilters, "total cashback": value })
+              }
+            />
+
+            <CurrencyInput
+              placeholder="total desconto"
+              value={tempFilters["total desconto"]}
+              onChange={(value) =>
+                setTempFilters({ ...tempFilters, "total desconto": value })
+              }
+            />
+
+            <CurrencyInput
+              placeholder="total líquido"
+              value={tempFilters["total líquido"]}
+              onChange={(value) =>
+                setTempFilters({ ...tempFilters, "total líquido": value })
+              }
+            />
+
             <Button
               onClick={() => {
                 setActiveFilters({
@@ -322,8 +316,6 @@ export default function Dashboard() {
                   checkin: formatDateForFilter(tempFilters.checkin),
                   checkout: formatDateForFilter(tempFilters.checkout),
                 });
-
-                // Limpa todos os campos após a busca
                 setTempFilters({
                   "Id na Operadora": "",
                   checkin: "",
@@ -343,7 +335,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Tabela de vendas filtradas com paginação */}
         <Card>
           <CardHeader>
             <CardTitle>Vendas Filtradas</CardTitle>
@@ -352,6 +343,7 @@ export default function Dashboard() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>ID da venda</TableHead>
                   <TableHead>ID na Operadora</TableHead>
                   <TableHead>Check-in</TableHead>
                   <TableHead>Check-out</TableHead>
@@ -368,6 +360,7 @@ export default function Dashboard() {
               <TableBody>
                 {currentItems.map((sale) => (
                   <TableRow key={sale.id}>
+                    <TableCell className="text-center">{sale.id}</TableCell>
                     <TableCell className="text-center">
                       {sale.idInTourOperator}
                     </TableCell>
@@ -390,13 +383,12 @@ export default function Dashboard() {
                         variant="outline"
                         size="icon"
                         onClick={() => {
-                          setSelectedSale(sale); // Define a venda selecionada
-                          setIsEditDialogOpen(true); // Abre o dialog
+                          setSelectedSale(sale);
+                          setIsEditDialogOpen(true);
                         }}
                       >
                         <EyeIcon className="h-4 w-4" />
                       </Button>
-
                       <Button
                         variant="destructive"
                         size="icon"
@@ -411,7 +403,6 @@ export default function Dashboard() {
               </TableBody>
             </Table>
 
-            {/* Controles de paginação */}
             <div className="mt-4 flex items-center justify-between">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -420,12 +411,10 @@ export default function Dashboard() {
               >
                 Anterior
               </button>
-
               <span>
                 Página {currentPage} de{" "}
                 {Math.ceil(filteredSales.length / itemsPerPage)}
               </span>
-
               <button
                 onClick={() =>
                   setCurrentPage((prev) =>
@@ -450,9 +439,9 @@ export default function Dashboard() {
           open={isEditDialogOpen}
           onClose={() => {
             setIsEditDialogOpen(false);
-            setSelectedSale(null); // Limpa a venda selecionada ao fechar
+            setSelectedSale(null);
           }}
-          sale={selectedSale} // Adicione esta prop
+          sale={selectedSale}
         />
       </div>
     </div>
