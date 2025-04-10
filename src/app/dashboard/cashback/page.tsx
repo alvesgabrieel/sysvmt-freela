@@ -27,7 +27,7 @@ import {
 type Sale = {
   saleId: number;
   clientName: string;
-  totalCashback: number;
+  amount: number;
   saleDate: string;
   expiryDate: string | null;
   status: string;
@@ -103,7 +103,7 @@ const Cashback = () => {
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Total Cashback</TableHead>
+                  <TableHead>Valor do cashback</TableHead>
                   <TableHead>Data Venda</TableHead>
                   <TableHead>Validade</TableHead>
                   <TableHead>Status</TableHead>
@@ -115,7 +115,7 @@ const Cashback = () => {
                     <TableRow key={sale.saleId}>
                       <TableCell>{sale.saleId}</TableCell>
                       <TableCell>{sale.clientName}</TableCell>
-                      <TableCell>R$ {sale.totalCashback.toFixed(2)}</TableCell>
+                      <TableCell>R$ {sale.amount}</TableCell>
                       <TableCell>
                         {new Date(sale.saleDate).toLocaleDateString()}
                       </TableCell>

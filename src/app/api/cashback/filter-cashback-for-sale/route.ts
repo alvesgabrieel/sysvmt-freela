@@ -41,6 +41,7 @@ export async function GET(req: Request) {
         },
         saleCashback: {
           select: {
+            amount: true,
             expiryDate: true,
             status: true,
           },
@@ -53,6 +54,7 @@ export async function GET(req: Request) {
       saleId: sale.id,
       saleDate: sale.saleDate,
       clientName: sale.client?.name || "Sem Cliente",
+      amount: sale.saleCashback?.amount || 0,
       totalCashback: sale.totalCashback,
       expiryDate: sale.saleCashback?.expiryDate || null,
       status: sale.saleCashback?.status || "N/A",

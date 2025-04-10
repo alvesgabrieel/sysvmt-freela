@@ -71,12 +71,12 @@ export default function EditSaleDialog({
     }>
   >([]);
 
-  const [cashback, setCashback] = useState<
-    Array<{
-      id: number;
-      name: string;
-    }>
-  >([]);
+  // const [cashback, setCashback] = useState<
+  //   Array<{
+  //     id: number;
+  //     name: string;
+  //   }>
+  // >([]);
 
   const [availableCompanions, setAvailableCompanions] = useState<
     Array<{
@@ -190,19 +190,19 @@ export default function EditSaleDialog({
   }, []);
 
   //busca cashback
-  useEffect(() => {
-    const fetchCashback = async () => {
-      try {
-        const response = await fetch("/api/cashback/list");
-        const data = await response.json();
-        setCashback(data);
-      } catch (error) {
-        console.error("Erro ao buscar Cashback:", error);
-      }
-    };
+  // useEffect(() => {
+  //   const fetchCashback = async () => {
+  //     try {
+  //       const response = await fetch("/api/cashback/list");
+  //       const data = await response.json();
+  //       setCashback(data);
+  //     } catch (error) {
+  //       console.error("Erro ao buscar Cashback:", error);
+  //     }
+  //   };
 
-    fetchCashback();
-  }, []);
+  //   fetchCashback();
+  // }, []);
 
   // Busca acompanhantes
   useEffect(() => {
@@ -671,7 +671,7 @@ export default function EditSaleDialog({
               </div>
 
               {/* CASHBACK */}
-              <div className="grid grid-cols-4 items-center gap-4">
+              {/* <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Cashback</Label>
                 <select
                   className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -692,7 +692,7 @@ export default function EditSaleDialog({
                     </option>
                   ))}
                 </select>
-              </div>
+              </div> */}
 
               {/* OBSERVACAO */}
               <div className="grid grid-cols-4 gap-4">

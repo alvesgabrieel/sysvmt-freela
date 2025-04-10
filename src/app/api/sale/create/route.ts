@@ -1,4 +1,4 @@
-import { CashbackStatus, PaymentMethodType } from "@prisma/client";
+import { PaymentMethodType } from "@prisma/client";
 import { addDays } from "date-fns";
 import { NextResponse } from "next/server";
 
@@ -6,7 +6,6 @@ import { parseBrazilianDate } from "@/app/functions/backend/parse-brazilian-date
 import { parseBrazilianNumber } from "@/app/functions/backend/parse-brazilian-number";
 import { db } from "@/lib/prisma";
 
-// Interfaces
 interface CompanionRequest {
   companionId: number;
 }
@@ -14,26 +13,26 @@ interface CompanionRequest {
 interface HostingRequest {
   hostingId: number;
   rooms: number;
-  price: string; // Formato "1.200,50"
+  price: string;
 }
 
 interface TicketRequest {
   ticketId: number;
-  date: string; // Formato "dd/mm/aaaa"
+  date: string;
   adults: number;
   kids: number;
   halfPriceTicket: number;
-  price: string; // Formato "1.500,99"
+  price: string;
 }
 
 interface InvoiceRequest {
   issuedInvoice: string;
-  estimatedIssueDate?: string; // Formato "dd/mm/aaaa" (opcional)
-  invoiceNumber?: string; // Opcional
-  invoiceDate?: string; // Formato "dd/mm/aaaa" (opcional)
-  expectedReceiptDate?: string; // Formato "dd/mm/aaaa" (opcional)
+  estimatedIssueDate?: string;
+  invoiceNumber?: string;
+  invoiceDate?: string;
+  expectedReceiptDate?: string;
   invoiceReceived: string;
-  receiptDate?: string; // Formato "dd/mm/aaaa" (opcional)
+  receiptDate?: string;
 }
 
 interface SaleRequest {
@@ -42,13 +41,13 @@ interface SaleRequest {
   tourOperatorId: number;
   clientId: number;
   paymentMethod: PaymentMethodType;
-  saleDate: string; // Formato "dd/mm/aaaa"
-  checkIn: string; // Formato "dd/mm/aaaa"
-  checkOut: string; // Formato "dd/mm/aaaa"
-  ticketDiscount: string; // Formato "0,00"
-  hostingDiscount: string; // Formato "50,00"
+  saleDate: string;
+  checkIn: string;
+  checkOut: string;
+  ticketDiscount: string;
+  hostingDiscount: string;
   observation?: string;
-  cashbackId?: number | null;
+  cashbackId?: string | null;
   companions?: CompanionRequest[];
   hostings?: HostingRequest[];
   tickets?: TicketRequest[];
@@ -77,20 +76,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // Converte valores e datas
-    const convertNumbers = {
-      ticketDiscount: parseBrazilianNumber(body.ticketDiscount),
-      hostingDiscount: parseBrazilianNumber(body.hostingDiscount),
-    };
-
-    const convertDates = {
-      saleDate: parseBrazilianDate(body.saleDate),
-      checkIn: parseBrazilianDate(body.checkIn),
-      checkOut: parseBrazilianDate(body.checkOut),
-    };
-
     const result = await db.$transaction(
       async (prisma) => {
+        // Converte valores e datas
+        const convertNumbers = {
+          ticketDiscount: parseBrazilianNumber(body.ticketDiscount),
+          hostingDiscount: parseBrazilianNumber(body.hostingDiscount),
+        };
+
+        const convertDates = {
+          saleDate: parseBrazilianDate(body.saleDate),
+          checkIn: parseBrazilianDate(body.checkIn),
+          checkOut: parseBrazilianDate(body.checkOut),
+        };
+
+        // 1. Busca cashbacks disponíveis para o cliente
+        const availableCashbacks = await prisma.saleCashback.findMany({
+          where: {
+            status: "ACTIVE",
+            expiryDate: { gt: new Date() },
+            sale: {
+              clientId: body.clientId,
+              canceledSale: false,
+            },
+          },
+          include: {
+            cashback: true,
+          },
+          orderBy: {
+            expiryDate: "asc", // Aplica os mais antigos primeiro
+          },
+        });
+
         // Cálculos de totais
         const totalHostings =
           body.hostings?.reduce((sum, hosting) => {
@@ -103,8 +120,23 @@ export async function POST(request: Request) {
           }, 0) || 0;
 
         const grossTotal = totalHostings + totalTickets;
-        const totalDiscount =
+        const initialDiscount =
           convertNumbers.ticketDiscount + convertNumbers.hostingDiscount;
+
+        // 2. Calcula cashback a aplicar
+        const totalAvailableCashback = availableCashbacks.reduce(
+          (sum, cb) => sum + cb.amount,
+          0,
+        );
+
+        // Aplica o cashback disponível, limitado ao valor restante da venda
+        const cashbackToApply = Math.min(
+          totalAvailableCashback,
+          grossTotal - initialDiscount,
+        );
+
+        // 3. Atualiza totais com cashback
+        const totalDiscount = initialDiscount + cashbackToApply;
         const netTotal = grossTotal - totalDiscount;
 
         // Buscar a comissão do vendedor
@@ -172,7 +204,7 @@ export async function POST(request: Request) {
             hostingDiscount: convertNumbers.hostingDiscount,
             observation: body.observation || "",
             grossTotal,
-            totalCashback: 0, // Inicializado como 0
+            totalCashback: cashbackToApply, // Só terá valor se cashbacks foram aplicados
             totalDiscount,
             netTotal,
             sallerCommissionValue,
@@ -227,61 +259,63 @@ export async function POST(request: Request) {
           },
         });
 
-        let totalCashback = 0;
-        let saleCashback = null;
-
-        // Lógica do Cashback
-        if (body.cashbackId) {
-          const cashback = await prisma.cashback.findUnique({
-            where: { id: body.cashbackId },
+        // 4. Marca cashbacks como usados (se algum foi aplicado)
+        if (cashbackToApply > 0) {
+          await prisma.saleCashback.updateMany({
+            where: {
+              id: {
+                in: availableCashbacks.map((cb) => cb.id),
+              },
+            },
+            data: {
+              status: "USED",
+            },
           });
+        }
 
-          if (cashback) {
-            // Determina data base conforme tipo
-            let startDate: Date;
-            switch (cashback.selectType) {
-              case "PURCHASEDATE":
-                startDate = convertDates.saleDate;
-                break;
-              case "CHECKIN":
-                startDate = convertDates.checkIn;
-                break;
-              case "CHECKOUT":
-                startDate = convertDates.checkOut;
-                break;
-              default:
-                startDate = convertDates.saleDate;
-            }
+        // Lógica para gerar NOVO cashback (se houver campanha ativa)
+        let saleCashback = null;
+        const currentDate = new Date();
+        const activeCashback = await prisma.cashback.findFirst({
+          where: {
+            startDate: { lte: currentDate },
+            endDate: { gte: currentDate },
+          },
+          orderBy: {
+            percentage: "desc",
+          },
+        });
 
-            // Calcular expiryDate garantindo horário final do dia
-            const expiryDate = addDays(
-              new Date(startDate.setHours(23, 59, 59, 999)), // Fim do dia
-              cashback.validityDays,
-            );
-            const status = CashbackStatus.ACTIVE;
-
-            // Calcula valor do cashback
-            totalCashback = grossTotal * (cashback.percentage / 100);
-
-            // Cria registro de SaleCashback
-            saleCashback = await prisma.saleCashback.create({
-              data: {
-                saleId: sale.id,
-                cashbackId: cashback.id,
-                status,
-                amount: totalCashback,
-                expiryDate,
-              },
-            });
-
-            // Atualiza APENAS totalCashback
-            await prisma.sale.update({
-              where: { id: sale.id },
-              data: {
-                totalCashback,
-              },
-            });
+        if (activeCashback) {
+          let startDate: Date;
+          switch (activeCashback.selectType) {
+            case "PURCHASEDATE":
+              startDate = convertDates.saleDate;
+              break;
+            case "CHECKIN":
+              startDate = convertDates.checkIn;
+              break;
+            case "CHECKOUT":
+              startDate = convertDates.checkOut;
+              break;
+            default:
+              startDate = convertDates.saleDate;
           }
+
+          const expiryDate = addDays(
+            new Date(startDate.setHours(23, 59, 59, 999)),
+            activeCashback.validityDays,
+          );
+
+          saleCashback = await prisma.saleCashback.create({
+            data: {
+              saleId: sale.id,
+              cashbackId: activeCashback.id,
+              status: "ACTIVE",
+              amount: netTotal * (activeCashback.percentage / 100),
+              expiryDate,
+            },
+          });
         }
 
         // Cria nota fiscal
@@ -306,11 +340,11 @@ export async function POST(request: Request) {
           },
         });
 
-        // Retorna a venda com todos os relacionamentos
         return {
           ...sale,
           saleCashback,
           invoice,
+          appliedCashbacks: cashbackToApply > 0 ? availableCashbacks : [],
         };
       },
       {

@@ -38,10 +38,30 @@ interface Client {
   name: string;
 }
 
-interface Cashback {
+interface SaleCashback {
   id: number;
-  name: string;
+  amount: number;
+  expiryDate: string;
+  cashback: {
+    id: number;
+    name: string;
+    percentage?: number;
+  };
+  sale: {
+    // Adicione esta propriedade
+    id: number;
+    saleDate: string;
+    client: {
+      id: number;
+      name: string;
+    };
+  };
 }
+
+// interface Cashback {
+//   id: number;
+//   name: string;
+// }
 
 interface Companion {
   id: number;
@@ -135,7 +155,11 @@ export default function RegisterSaleDialog({
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
 
-  const [cashbacks, setCashbacks] = useState<Cashback[]>([]);
+  // const [cashbacks, setCashbacks] = useState<Cashback[]>([]);
+  // const [loadingCashbacks, setLoadingCashbacks] = useState(true);
+  const [availableCashbacks, setAvailableCashbacks] = useState<SaleCashback[]>(
+    [],
+  );
   const [loadingCashbacks, setLoadingCashbacks] = useState(true);
 
   const [allCompanions, setAllCompanions] = useState<Companion[]>([]);
@@ -182,11 +206,17 @@ export default function RegisterSaleDialog({
     fetchSallers();
     fetchTourOperator();
     fetchClients();
-    fetchCashbacks();
+    // fetchCashbacks();
     fetchCompanions();
     fetchHostings();
     fetchTickets();
   }, []);
+
+  useEffect(() => {
+    if (formData.clientId) {
+      fetchAvailableCashbacks(Number(formData.clientId));
+    }
+  }, [formData.clientId]);
 
   const fetchSallers = async () => {
     try {
@@ -236,17 +266,37 @@ export default function RegisterSaleDialog({
     }
   };
 
-  const fetchCashbacks = async () => {
+  // const fetchCashbacks = async () => {
+  //   try {
+  //     setLoadingCashbacks(true);
+  //     const response = await fetch("/api/cashback/list");
+  //     if (!response.ok) {
+  //       throw new Error("Erro ao carregar cashbacks");
+  //     }
+  //     const data = await response.json();
+  //     setCashbacks(data);
+  //   } catch (error) {
+  //     console.error("Erro ao carregar cashbacks:", error);
+  //   } finally {
+  //     setLoadingCashbacks(false);
+  //   }
+  // };
+
+  //cashback disponivel caso o cliente tenha
+  const fetchAvailableCashbacks = async (clientId: number) => {
     try {
       setLoadingCashbacks(true);
-      const response = await fetch("/api/cashback/list");
+      const response = await fetch(
+        `/api/sale/cashbacks-available?clientId=${clientId}`,
+      );
       if (!response.ok) {
-        throw new Error("Erro ao carregar cashbacks");
+        throw new Error("Erro ao carregar cashbacks disponíveis");
       }
       const data = await response.json();
-      setCashbacks(data);
+      console.log("Dados recebidos:", data); // Adicione isto para debug
+      setAvailableCashbacks(data);
     } catch (error) {
-      console.error("Erro ao carregar cashbacks:", error);
+      console.error("Erro ao carregar cashbacks disponíveis:", error);
     } finally {
       setLoadingCashbacks(false);
     }
@@ -427,17 +477,17 @@ export default function RegisterSaleDialog({
   };
 
   const handleCurrencyChangeInput = (field: keyof FormData, value: string) => {
-    // Remove tudo que não for dígito
-    const digits = value.replace(/\D/g, "");
-
-    // Se estiver vazio, define como "0,00"
-    if (digits === "") {
+    // Se o valor for apagado completamente, mantém vazio
+    if (value === "") {
       setFormData((prev) => ({
         ...prev,
-        [field]: "0,00",
+        [field]: "",
       }));
       return;
     }
+
+    // Remove tudo que não for dígito
+    const digits = value.replace(/\D/g, "");
 
     // Formata o valor
     const formatted = formatCurrencyForInput(digits);
@@ -448,12 +498,26 @@ export default function RegisterSaleDialog({
     }));
   };
 
+  const prepareValueForAPI = (value: string): string => {
+    return value === "" ? "0,00" : formatCurrencyForAPI(value);
+  };
+
   const formatCurrencyForAPI = (value: string): string => {
+    // Se o valor estiver vazio ou for "0,00", retorna "0,00"
+    if (!value || value === "0,00") {
+      return "0,00";
+    }
+
     // Remove tudo que não for dígito ou vírgula
     const cleaned = value.replace(/[^\d,]/g, "");
 
     // Converte para número (substitui vírgula por ponto para o parseFloat)
     const numberValue = parseFloat(cleaned.replace(",", "."));
+
+    // Se for NaN (caso de entrada inválida), retorna "0,00"
+    if (isNaN(numberValue)) {
+      return "0,00";
+    }
 
     // Formata para o padrão brasileiro (com 2 decimais, vírgula e ponto)
     return numberValue.toLocaleString("pt-BR", {
@@ -617,8 +681,8 @@ export default function RegisterSaleDialog({
         checkOut: formatDateWithSlashes(formData.checkOut),
         sallerCommission: formData.sallerCommission,
         agencyCommission: formData.agencyCommission,
-        ticketDiscount: formData.ticketDiscount,
-        hostingDiscount: formData.hostingDiscount,
+        ticketDiscount: prepareValueForAPI(formData.ticketDiscount),
+        hostingDiscount: prepareValueForAPI(formData.hostingDiscount),
         observation: formData.observation,
         cashbackId: formData.cashbackId ? Number(formData.cashbackId) : null,
         companions: acompanhantes
@@ -953,25 +1017,38 @@ export default function RegisterSaleDialog({
                   className="col-span-3"
                 />
               </div>
+              {/* cashback */}
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="cashback" className="text-right">
-                  Cashback
+                <Label htmlFor="cashback-disponivel" className="text-right">
+                  Cashback Disponível
                 </Label>
                 <select
-                  id="cashback"
+                  id="cashback-disponivel"
                   className="border-input ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border bg-[#e5e5e5]/30 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.cashbackId}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                     handleInputChange("cashbackId", e.target.value)
                   }
-                  disabled={loadingCashbacks}
+                  disabled={loadingCashbacks || !formData.clientId}
                 >
                   <option value="">
-                    {loadingCashbacks ? "Carregando..." : " "}
+                    {loadingCashbacks
+                      ? "Carregando..."
+                      : !formData.clientId
+                        ? "Selecione um cliente primeiro"
+                        : availableCashbacks.length === 0
+                          ? "Nenhum cashback disponível"
+                          : "Selecione um cashback"}
                   </option>
-                  {cashbacks.map((cashback) => (
+                  {availableCashbacks.map((cashback) => (
                     <option key={cashback.id} value={cashback.id}>
-                      {cashback.name}
+                      {cashback.cashback?.name || "Nome não disponível"} - R${" "}
+                      {cashback.amount?.toFixed(2) || "0.00"}
+                      (Válido até{" "}
+                      {cashback.expiryDate
+                        ? new Date(cashback.expiryDate).toLocaleDateString()
+                        : "data não disponível"}
+                      )
                     </option>
                   ))}
                 </select>
