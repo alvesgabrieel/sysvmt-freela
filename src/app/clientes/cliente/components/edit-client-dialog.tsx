@@ -3,6 +3,7 @@
 import { Loader } from "lucide-react";
 import { useEffect, useState } from "react";
 import { IMaskInput } from "react-imask";
+import Select from "react-select";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchCitiesByState, fetchStates } from "@/services/ibge";
 
+interface Tag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface Client {
   id: number;
   name: string;
@@ -27,7 +34,7 @@ interface Client {
   secondaryPhone: string;
   state: string;
   city: string;
-  tags: [];
+  tags: Tag[];
 }
 
 interface EditClientDialogProps {
@@ -44,12 +51,40 @@ export const EditClientDialog = ({
   onSave,
 }: EditClientDialogProps) => {
   const [editedClient, setEditedClient] = useState<Client>(client);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    client.tags.map((tag) => tag.id),
+  );
 
   const [states, setStates] = useState<
     { id: number; sigla: string; nome: string }[]
   >([]);
   const [cities, setCities] = useState<{ id: number; nome: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Busca as tags disponíveis
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const response = await fetch("/api/tag/read");
+        if (response.ok) {
+          const result = await response.json();
+          setTags(result.tags);
+        } else {
+          toast.error("Erro ao carregar as tags");
+        }
+      } catch (error) {
+        toast.error("Erro ao carregar as tags");
+        console.error("Erro ao carregar as tags", error);
+      }
+    };
+    fetchTags();
+  }, []);
+
+  // Atualiza as tags selecionadas quando o cliente muda
+  useEffect(() => {
+    setSelectedTags(client.tags.map((tag) => tag.id));
+  }, [client]);
 
   // Busca os estados ao abrir o diálogo
   useEffect(() => {
@@ -93,13 +128,12 @@ export const EditClientDialog = ({
       [name]: value,
     }));
 
-    // Se o estado for alterado, busca as cidades correspondentes
     if (name === "state") {
       const selectedState = states.find((s) => s.nome === value);
       if (selectedState) {
         handleStateChange(selectedState.id);
       } else {
-        setCities([]); // Limpa as cidades se nenhum estado for selecionado
+        setCities([]);
       }
     }
   };
@@ -118,22 +152,33 @@ export const EditClientDialog = ({
           primaryPhone: editedClient.primaryPhone,
           secondaryPhone: editedClient.secondaryPhone,
           cpf: editedClient.cpf,
+          tags: selectedTags, // Inclui as tags selecionadas
         }),
       });
 
       if (response.ok) {
-        onSave(editedClient); // Atualiza o estado no frontend
-        onClose(); // Fecha o diálogo
+        const updatedClient = await response.json();
+        onSave(updatedClient);
+        onClose();
         toast.success("Registro atualizado com sucesso");
       } else {
-        console.error("Erro ao atualizar a cliente");
+        const error = await response.json();
+        toast.error(error.message || "Erro ao atualizar o cliente");
       }
     } catch (error) {
-      console.error("Erro ao atualizar a cliente:", error);
+      console.error("Erro ao atualizar o cliente:", error);
+      toast.error("Erro ao atualizar o cliente");
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Transforma as tags no formato que o react-select espera
+  const tagOptions = tags.map((tag) => ({
+    value: tag.id,
+    label: tag.name,
+    color: tag.color,
+  }));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -150,6 +195,87 @@ export const EditClientDialog = ({
               onChange={handleChange}
             />
           </div>
+
+          {/* Campo de Tags */}
+          <div>
+            <Label>Tags</Label>
+            <Select
+              options={tagOptions}
+              isMulti
+              value={tagOptions.filter((option) =>
+                selectedTags.includes(option.value),
+              )}
+              onChange={(selectedOptions) => {
+                setSelectedTags(selectedOptions.map((option) => option.value));
+              }}
+              styles={{
+                control: (base, { isFocused }) => ({
+                  ...base,
+                  backgroundColor: "rgba(229, 229, 229, 0.3)",
+                  borderColor: isFocused ? "#86b7fe" : "#e2e8f0",
+                  boxShadow: isFocused
+                    ? "0 0 0 0.25rem rgba(13, 110, 253, 0.25)"
+                    : "none",
+                  minHeight: "40px",
+                  "&:hover": {
+                    borderColor: "#86b7fe",
+                  },
+                }),
+                multiValue: (base) => ({
+                  ...base,
+                  backgroundColor: "rgba(229, 229, 229, 0.5)",
+                }),
+                multiValueLabel: (base) => ({
+                  ...base,
+                  color: "#1e293b",
+                  fontWeight: "500",
+                }),
+                multiValueRemove: (base) => ({
+                  ...base,
+                  color: "#64748b",
+                  ":hover": {
+                    backgroundColor: "rgba(229, 229, 229, 0.8)",
+                    color: "#dc3545",
+                  },
+                }),
+                menu: (base) => ({
+                  ...base,
+                  backgroundColor: "rgba(229, 229, 229, 0.95)",
+                  marginTop: "4px",
+                }),
+                option: (base, { isFocused, isSelected }) => ({
+                  ...base,
+                  backgroundColor: isSelected
+                    ? "rgba(203, 213, 225, 0.7)"
+                    : isFocused
+                      ? "rgba(203, 213, 225, 0.5)"
+                      : "transparent",
+                  color: "#1e293b",
+                  "&:active": {
+                    backgroundColor: "rgba(203, 213, 225, 0.7)",
+                  },
+                }),
+                input: (base) => ({
+                  ...base,
+                  color: "#1e293b",
+                }),
+                placeholder: (base) => ({
+                  ...base,
+                  color: "#64748b",
+                }),
+              }}
+              theme={(theme) => ({
+                ...theme,
+                colors: {
+                  ...theme.colors,
+                  primary: "#e2e8f0",
+                  primary25: "rgba(229, 229, 229, 0.5)",
+                  primary50: "rgba(229, 229, 229, 0.7)",
+                },
+              })}
+            />
+          </div>
+
           <div>
             <Label>Login</Label>
             <Input

@@ -29,6 +29,11 @@ import { fetchCitiesByState, fetchStates } from "@/services/ibge";
 import { EditClientDialog } from "./components/edit-client-dialog";
 import RegisterCompanionDialog from "./components/register-client-dialog";
 
+interface Tag {
+  id: string;
+  name: string;
+  color: string;
+}
 interface Client {
   id: number;
   name: string;
@@ -40,7 +45,7 @@ interface Client {
   secondaryPhone: string;
   state: string;
   city: string;
-  tags: [];
+  tags: Tag[];
 }
 
 const Cliente = () => {
@@ -73,14 +78,14 @@ const Cliente = () => {
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (client: Client) => {
-    setSelectedClient(client); // Define o ingresso selecionado
-    setIsEditDialogOpen(true); // Abre o diálogo
+    setSelectedClient(client);
+    setIsEditDialogOpen(true);
   };
 
   // Função para fechar o diálogo e limpar o estado
   const handleCloseDialog = () => {
-    setIsEditDialogOpen(false); // Fecha o diálogo
-    setSelectedClient(null); // Limpa o ingresso selecionado
+    setIsEditDialogOpen(false);
+    setSelectedClient(null);
   };
 
   // Função para salvar as alterações

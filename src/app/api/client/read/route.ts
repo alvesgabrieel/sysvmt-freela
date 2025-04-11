@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     }
 
     const page = parseInt(searchParams.get("page") || "1", 10);
-    const itemsPerPage = parseInt(searchParams.get("itemsPerPage") || "5", 10); // Removida a opção "0"
+    const itemsPerPage = parseInt(searchParams.get("itemsPerPage") || "5", 10);
     const skip = (page - 1) * itemsPerPage;
 
     // 3. Consulta ao banco (com paginação em TODOS os casos)
@@ -59,8 +59,11 @@ export async function GET(request: Request) {
           ...(filters.city && { city: filters.city }),
           ...(filters.primaryPhone && { primaryPhone: filters.primaryPhone }),
         },
+        include: {
+          tags: true, // Isso incluirá todas as tags vinculadas ao cliente
+        },
         skip,
-        take: itemsPerPage, // Sem condicional: sempre paginado
+        take: itemsPerPage,
         orderBy: { id: "desc" },
       }),
       db.client.count({ where: { ...filters } }), // Contagem total
