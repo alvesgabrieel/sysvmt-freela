@@ -90,6 +90,9 @@ export async function GET(request: Request) {
         saller: true,
         client: true,
       },
+      orderBy: {
+        id: "desc",
+      },
     });
 
     return NextResponse.json(sales, { status: 200 });
