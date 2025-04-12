@@ -18,17 +18,67 @@ interface Sale {
   tourOperator?: { name: string };
 }
 
+// ============= FUNÇÕES DE FORMATAÇÃO =============
+const formatarDataBR = (dataString: string | null | undefined): string => {
+  if (!dataString) return "N/A";
+  try {
+    // Ajuste para fuso horário
+    const data = new Date(dataString);
+    const dataAjustada = new Date(
+      data.getTime() + data.getTimezoneOffset() * 60000,
+    );
+    return dataAjustada.toLocaleDateString("pt-BR");
+  } catch {
+    return "N/A";
+  }
+};
+
+const formatarDataFiltroBR = (
+  dataString: string | number | null | undefined,
+): string => {
+  if (dataString === null || dataString === undefined)
+    return "Não especificado";
+
+  const dataStr = dataString.toString();
+
+  // Conversão direta para datas no formato YYYY-MM-DD
+  if (dataStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [ano, mes, dia] = dataStr.split("-");
+    return `${dia}/${mes}/${ano}`;
+  }
+
+  try {
+    return formatarDataBR(dataStr);
+  } catch {
+    return "Não especificado";
+  }
+};
+
+const formatarPrecoBR = (valor: number): string => {
+  return valor.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+const formatarTextoFiltro = (
+  texto: string | number | null | undefined,
+): string => {
+  if (texto === null || texto === undefined) return "Não especificado";
+  return texto.toString().trim();
+};
+
+// ============= GERADOR DE PDF =============
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const salesData: Sale[] = body.sales;
+    const filters: Record<string, string | number | null | undefined> =
+      body.filters || {};
 
     if (!Array.isArray(salesData)) {
       return NextResponse.json(
-        {
-          error:
-            "O corpo da requisição deve conter uma lista de vendas em 'sales'.",
-        },
+        { error: "Dados de vendas inválidos." },
         { status: 400 },
       );
     }
@@ -40,188 +90,216 @@ export async function POST(request: Request) {
       "Roboto_Condensed-Regular.ttf",
     );
 
-    // Aumentei a margem direita para 50px
     const doc = new PDFDocument({
       font: fontPath,
-      margin: 40,
+      margin: 30,
+      size: "A4",
     });
-    const buffers: Uint8Array[] = [];
 
+    const buffers: Uint8Array[] = [];
     doc.on("data", (chunk) => buffers.push(chunk));
 
-    // Cabeçalho centralizado com margem
-    doc.fontSize(18).text("Relatório de Vendas", {
-      align: "center",
-      width: doc.page.width - 100, // Usando pageWidth com margens
-    });
-    doc.moveDown();
+    // ============= CABEÇALHO =============
+    doc
+      .fontSize(18)
+      .text("RELATÓRIO DE VENDAS", {
+        align: "center",
+        underline: true,
+      })
+      .moveDown(1);
 
-    // Configurações da tabela COM MARGENS
-    const tableTop = 100;
-    const margin = 40;
-    const rightMargin = 50; // Margem direita explícita
-    const pageWidth = doc.page.width - margin - rightMargin; // CORRIGIDO
-    const cellPadding = 8;
-    const rowHeight = 30;
+    // ============= FILTROS APLICADOS =============
+    doc
+      .fontSize(12)
+      .text("Filtros aplicados:", { underline: true })
+      .moveDown(0.5);
 
-    // Definição das colunas (com largura total ajustada)
-    const columns = [
-      { header: "ID", width: 40 },
-      { header: "Cliente", width: 120 },
-      { header: "Operadora", width: 100 },
-      { header: "Check-in", width: 80 },
-      { header: "Check-out", width: 80 },
-      { header: "Pagamento", width: 90 },
-      { header: "Total", width: 70 },
+    const filtrosParaExibir = [
+      {
+        label: "Período da venda",
+        value:
+          filters.saleDateFrom && filters.saleDateTo
+            ? `${filters.saleDateFrom} - ${filters.saleDateTo}`
+            : null,
+      },
+      {
+        label: "Período do check-in",
+        value:
+          filters.checkInFrom && filters.checkInTo
+            ? `${filters.checkInFrom} - ${filters.checkInTo}`
+            : null,
+      },
+      {
+        label: "Período do check-out",
+        value:
+          filters.checkOutFrom && filters.checkOutTo
+            ? `${filters.checkOutFrom} - ${filters.checkOutTo}`
+            : null,
+      },
+      { label: "Operadora", value: filters.tourOperator },
+      { label: "Ingresso", value: filters.ticket },
+      { label: "Hospedagem", value: filters.hosting },
     ];
 
-    // Verificação da largura total
-    const totalWidth = columns.reduce((sum, col) => sum + col.width, 0);
-    if (totalWidth > pageWidth) {
-      // Ajuste proporcional se ultrapassar
-      const ratio = pageWidth / totalWidth;
-      columns.forEach((col) => (col.width *= ratio));
-    }
+    filtrosParaExibir.forEach((filtro) => {
+      let valorFormatado;
 
-    // Função para desenhar células COM MARGEM DIREITA
-    const drawCell = (
-      text: string,
-      x: number,
-      y: number,
-      width: number,
-      isHeader = false,
-    ) => {
-      doc
-        .fontSize(10)
-        .fillColor(isHeader ? "#FFFFFF" : "#000000")
-        .text(text, x + cellPadding, y + cellPadding, {
-          width: width - 2 * cellPadding,
-          align: "left",
-          lineBreak: false,
-        });
-    };
-
-    // Desenhar cabeçalho da tabela COM MARGEM DIREITA
-    let x = margin;
-    doc.fillColor("#3498db");
-    columns.forEach((column) => {
-      // Limite direito explícito
-      if (x + column.width > doc.page.width - rightMargin) {
-        column.width = doc.page.width - rightMargin - x;
+      if (
+        filtro.value &&
+        typeof filtro.value === "string" &&
+        filtro.value.includes("-")
+      ) {
+        // Formata intervalos de data
+        const [dataInicio, dataFim] = filtro.value.split(" - ");
+        valorFormatado = `${formatarDataFiltroBR(dataInicio)} - ${formatarDataFiltroBR(dataFim)}`;
+      } else {
+        valorFormatado = formatarTextoFiltro(filtro.value);
       }
 
+      doc.fontSize(10).text(`• ${filtro.label}: ${valorFormatado}`);
+    });
+
+    doc.moveDown(2);
+
+    // ============= TABELA DE VENDAS =============
+    const tableTop = doc.y;
+    const marginTable = 30;
+    const rowHeight = 22;
+    const pageWidth = doc.page.width - marginTable * 2;
+
+    // Configuração das colunas
+    const columns = [
+      { header: "ID", width: 30 },
+      { header: "Cliente", width: 80 },
+      { header: "Operadora", width: 60 },
+      { header: "Check-in", width: 60 },
+      { header: "Check-out", width: 60 },
+      { header: "Total", width: 60 },
+      { header: "Com. Ag.", width: 60 },
+      { header: "Com. Vend.", width: 60 },
+    ];
+
+    // Cabeçalho da tabela
+    doc
+      .fillColor("#3498db")
+      .rect(marginTable, tableTop, pageWidth, rowHeight)
+      .fill();
+
+    let x = marginTable;
+    columns.forEach((column) => {
       doc
-        .rect(x, tableTop, column.width, rowHeight)
-        .fillAndStroke("#3498db", "#3498db");
-      drawCell(column.header, x, tableTop, column.width, true);
+        .fontSize(9)
+        .fillColor("#FFFFFF")
+        .text(column.header, x + 3, tableTop + 6, {
+          width: column.width,
+          align: "left",
+        });
       x += column.width;
     });
 
-    // Preencher dados das vendas COM CONTROLE DE MARGEM
+    // Linhas da tabela
     let y = tableTop + rowHeight;
     salesData.forEach((sale, index) => {
-      // Quebra de página com margem inferior de 100px
-      if (y + rowHeight > doc.page.height - 100) {
+      if (y + rowHeight > doc.page.height - 40) {
         doc.addPage();
         y = 40;
 
-        // Redesenhar cabeçalho
-        x = margin;
-        doc.fillColor("#3498db");
+        // Redesenha o cabeçalho em nova página
+        let xHeader = marginTable;
+        doc
+          .fillColor("#3498db")
+          .rect(marginTable, y, pageWidth, rowHeight)
+          .fill();
+
         columns.forEach((column) => {
-          if (x + column.width > doc.page.width - rightMargin) {
-            column.width = doc.page.width - rightMargin - x;
-          }
           doc
-            .rect(x, y, column.width, rowHeight)
-            .fillAndStroke("#3498db", "#3498db");
-          drawCell(column.header, x, y, column.width, true);
-          x += column.width;
+            .fontSize(9)
+            .fillColor("#FFFFFF")
+            .text(column.header, xHeader + 3, y + 6, {
+              width: column.width,
+              align: "left",
+            });
+          xHeader += column.width;
         });
+
         y += rowHeight;
       }
 
-      // Desenhar linha de dados
-      x = margin;
+      // Cor de fundo alternada
+      doc
+        .fillColor(index % 2 === 0 ? "#FFFFFF" : "#F5F5F5")
+        .rect(marginTable, y, pageWidth, rowHeight)
+        .fill();
+
+      // Conteúdo das células
+      x = marginTable;
       columns.forEach((column, colIndex) => {
-        // Garantir que não ultrapasse a margem direita
-        const cellWidth = Math.min(
-          column.width,
-          doc.page.width - rightMargin - x,
-        );
-
-        doc
-          .fillColor(index % 2 === 0 ? "#FFFFFF" : "#F5F5F5")
-          .rect(x, y, cellWidth, rowHeight)
-          .fillAndStroke("#FFFFFF", "#EEEEEE");
-
         let cellText = "";
         switch (colIndex) {
           case 0:
             cellText = sale.id.toString();
             break;
           case 1:
-            cellText = sale.client.name;
+            cellText =
+              sale.client.name.substring(0, 15) +
+              (sale.client.name.length > 15 ? "..." : "");
             break;
           case 2:
-            cellText = sale.tourOperator?.name || "N/A";
+            cellText = sale.tourOperator?.name?.substring(0, 10) || "-";
             break;
           case 3:
-            cellText = sale.checkIn?.slice(0, 10) || "N/A";
+            cellText = formatarDataBR(sale.checkIn);
             break;
           case 4:
-            cellText = sale.checkOut?.slice(0, 10) || "N/A";
+            cellText = formatarDataBR(sale.checkOut);
             break;
           case 5:
-            cellText = sale.paymentMethod || "N/A";
+            cellText = `R$ ${formatarPrecoBR(sale.netTotal)}`;
             break;
           case 6:
-            cellText = `R$ ${sale.netTotal.toFixed(2)}`;
+            cellText = `R$ ${formatarPrecoBR(sale.agencyCommissionValue)}`;
+            break;
+          case 7:
+            cellText = `R$ ${formatarPrecoBR(sale.sallerCommissionValue)}`;
             break;
         }
 
-        drawCell(cellText, x, y, cellWidth);
-        x += cellWidth;
+        doc
+          .fontSize(8)
+          .fillColor("#000000")
+          .text(cellText, x + 3, y + 6, {
+            width: column.width - 6,
+            align: "left",
+            ellipsis: true,
+          });
+
+        x += column.width;
       });
 
       y += rowHeight;
     });
 
-    // Espaçamento final ajustado (50px da margem inferior)
-    const finalY = Math.min(y + 30, doc.page.height - 50);
-
-    // Data e hora alinhada à esquerda COM MARGEM
-    const now = new Date();
+    // ============= RODAPÉ =============
     doc
       .fontSize(10)
-      .fillColor("#000000")
       .text(
-        `Relatório gerado em: ${now.toLocaleDateString()} às ${now.toLocaleTimeString()}`,
-        margin,
-        finalY,
-        {
-          width: pageWidth,
-          align: "left",
-        },
+        `Relatório gerado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
+        { align: "right" },
       );
 
-    const pdfBuffer: Uint8Array = await new Promise((resolve) => {
-      doc.on("end", () => {
-        resolve(Buffer.concat(buffers));
-      });
+    // Finaliza o PDF
+    const pdfBuffer = await new Promise<Buffer>((resolve) => {
+      doc.on("end", () => resolve(Buffer.concat(buffers)));
       doc.end();
     });
 
-    return new NextResponse(
-      new Blob([pdfBuffer], { type: "application/pdf" }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": "inline; filename=relatorio.pdf",
-        },
+    return new NextResponse(pdfBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": "inline; filename=relatorio-vendas.pdf",
       },
-    );
+    });
   } catch (error) {
     console.error("Erro ao gerar PDF:", error);
     return NextResponse.json({ error: "Erro ao gerar PDF." }, { status: 500 });

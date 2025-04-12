@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
+import { formatCurrency } from "@/app/functions/frontend/format-backend-currency-to-frontend";
+import { formatBackendDateToFrontend } from "@/app/functions/frontend/format-backend-date-to-frontend";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,9 +50,12 @@ const RelatorioDeVendas = () => {
 
   const [sales, setSales] = useState<Sale[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Estado para controlar o loading
   const rowsPerPage = 10;
 
   const buscarRelatorio = async () => {
+    setIsLoading(true); // Ativa o loading
     try {
       const params = new URLSearchParams({
         ...(filters.dataInicio && { saleDateFrom: filters.dataInicio }),
@@ -68,17 +73,35 @@ const RelatorioDeVendas = () => {
       const data = await response.json();
       setSales(data);
       setCurrentPage(1);
+      setHasSearched(true);
     } catch (error) {
       console.error("Erro ao buscar relatório:", error);
+      setHasSearched(true);
+    } finally {
+      setIsLoading(false); // Desativa o loading independente do resultado
     }
   };
 
   const gerarPDF = async () => {
     try {
+      const filtrosParaPDF = {
+        saleDateFrom: filters.dataInicio,
+        saleDateTo: filters.dataFim,
+        checkInFrom: filters.checkinInicio,
+        checkInTo: filters.checkinFim,
+        checkOutFrom: filters.checkoutInicio,
+        checkOutTo: filters.checkoutFim,
+        tourOperator: filters.operadora,
+        ticket: filters.ingresso,
+        hosting: filters.hospedagem,
+      };
+
+      console.log("Filtros enviados para o PDF:", filtrosParaPDF);
+
       const response = await fetch("/api/sale/report-sale", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sales }),
+        body: JSON.stringify({ sales, filters: filtrosParaPDF }),
       });
 
       const blob = await response.blob();
@@ -196,20 +219,58 @@ const RelatorioDeVendas = () => {
               className="w-32"
               variant="outline"
               onClick={buscarRelatorio}
+              disabled={isLoading} // Desabilita o botão durante o loading
             >
-              Buscar
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="h-4 w-4 animate-spin text-current"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Buscando...
+                </div>
+              ) : (
+                "Buscar"
+              )}
             </Button>
             <Button
               className="w-32"
               onClick={gerarPDF}
-              disabled={sales.length === 0}
+              disabled={sales.length === 0 || isLoading} // Desabilita durante o loading
             >
               Gerar PDF
             </Button>
           </div>
         </Card>
 
-        {sales.length > 0 && (
+        {hasSearched && sales.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Nenhum registro encontrado</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Não foram encontrados registros com os filtros aplicados.
+              </p>
+            </CardContent>
+          </Card>
+        ) : sales.length > 0 ? (
           <Card>
             <CardHeader>
               <CardTitle>Vendas Encontradas</CardTitle>
@@ -236,16 +297,24 @@ const RelatorioDeVendas = () => {
                       <TableCell>{sale.id}</TableCell>
                       <TableCell>{sale.client?.name}</TableCell>
                       <TableCell>{sale.tourOperator?.name || "N/A"}</TableCell>
-                      <TableCell>{sale.checkIn?.slice(0, 10)}</TableCell>
-                      <TableCell>{sale.checkOut?.slice(0, 10)}</TableCell>
-                      <TableCell>R$ {sale.grossTotal.toFixed(2)}</TableCell>
-                      <TableCell>R$ {sale.totalDiscount.toFixed(2)}</TableCell>
-                      <TableCell>R$ {sale.netTotal.toFixed(2)}</TableCell>
                       <TableCell>
-                        R$ {sale.agencyCommissionValue?.toFixed(2)}
+                        {formatBackendDateToFrontend(sale.checkIn)}
                       </TableCell>
                       <TableCell>
-                        R$ {sale.sallerCommissionValue?.toFixed(2)}
+                        {formatBackendDateToFrontend(sale.checkOut)}
+                      </TableCell>
+                      <TableCell>
+                        R$ {formatCurrency(sale.grossTotal)}
+                      </TableCell>
+                      <TableCell>
+                        R$ {formatCurrency(sale.totalDiscount)}
+                      </TableCell>
+                      <TableCell>R$ {formatCurrency(sale.netTotal)}</TableCell>
+                      <TableCell>
+                        R$ {formatCurrency(sale.agencyCommissionValue)}
+                      </TableCell>
+                      <TableCell>
+                        R$ {formatCurrency(sale.sallerCommissionValue)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -275,7 +344,7 @@ const RelatorioDeVendas = () => {
               )}
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </div>
     </div>
   );
