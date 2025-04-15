@@ -19,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sale } from "@/types/sale";
 
+type PaymentMethodType = "PIX" | "DINHEIRO" | "DEBITO" | "CREDITO";
+
 interface EditSaleDialogProps {
   open: boolean;
   onClose: () => void;
@@ -31,16 +33,13 @@ export default function EditSaleDialog({
   sale,
 }: EditSaleDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
-
-  const [activeTab, setActiveTab] = useState("gerais"); // Adicione este estado
+  const [activeTab, setActiveTab] = useState("gerais");
   const [editedSale, setEditedSale] = useState<Partial<Sale>>({});
-  // Estado para o formulário de nova hospedagem
   const [newHosting, setNewHosting] = useState({
     hostingId: 0,
-    rooms: 0,
+    rooms: 1,
     price: "",
   });
-
   const [newTicket, setNewTicket] = useState({
     date: "",
     ticketId: 0,
@@ -49,61 +48,62 @@ export default function EditSaleDialog({
     halfPriceTicket: 0,
     price: "",
   });
-
-  const [sallers, setSallers] = useState<
-    Array<{
-      id: number;
-      name: string;
-    }>
+  const [sallers, setSallers] = useState<Array<{ id: number; name: string }>>(
+    [],
+  );
+  const [tourOperators, setTourOperators] = useState<
+    Array<{ id: number; name: string }>
   >([]);
-
-  const [tourOperator, setTourOperator] = useState<
-    Array<{
-      id: number;
-      name: string;
-    }>
-  >([]);
-
-  const [client, setClient] = useState<
-    Array<{
-      id: number;
-      name: string;
-    }>
-  >([]);
-
-  // const [cashback, setCashback] = useState<
-  //   Array<{
-  //     id: number;
-  //     name: string;
-  //   }>
-  // >([]);
-
+  const [clients, setClients] = useState<Array<{ id: number; name: string }>>(
+    [],
+  );
   const [availableCompanions, setAvailableCompanions] = useState<
-    Array<{
-      id: number;
-      name: string;
-    }>
+    Array<{ id: number; name: string }>
   >([]);
-
   const [availableHostings, setAvailableHostings] = useState<
-    Array<{
-      id: number;
-      name: string;
-      price: number;
-    }>
+    Array<{ id: number; name: string; price: number }>
   >([]);
-
   const [availableTickets, setAvailableTickets] = useState<
-    Array<{
-      id: number;
-      name: string;
-      price: number;
-    }>
+    Array<{ id: number; name: string; price: number }>
   >([]);
 
+  // Formata a data para o formato DD/MM/AAAA garantindo as barras
+  const formatDateWithSlashes = (dateString: string): string => {
+    const digitsOnly = dateString.replace(/\D/g, "");
+    if (!digitsOnly) return "";
+    if (digitsOnly.length <= 2) return digitsOnly;
+    if (digitsOnly.length <= 4)
+      return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2)}`;
+    return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2, 4)}/${digitsOnly.slice(4, 8)}`;
+  };
+
+  // Garante que a data esteja no formato correto
+  const ensureDateFormat = (date: string | Date | null | undefined): string => {
+    if (!date || date === "") return "";
+
+    if (typeof date === "string" && /^\d{2}\/\d{2}\/\d{4}$/.test(date)) {
+      return date;
+    }
+
+    const formattedDate = typeof date === "string" ? date : date.toISOString();
+    return formatBackendDateToFrontend(formattedDate);
+  };
+
+  // Formata valores monetários para o input
+  const formatCurrencyForInput = (value: string): string => {
+    let digits = value.replace(/\D/g, "");
+    digits = digits.padStart(3, "0");
+    let formatted = digits.replace(/(\d{2})$/, ",$1");
+    formatted = formatted.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+    if (formatted.startsWith("0") && formatted.length > 4) {
+      formatted = formatted.replace(/^0+/, "");
+    }
+    return formatted;
+  };
+
+  // Inicializa os dados da venda
   useEffect(() => {
     if (sale) {
-      console.log("Dados da venda recebidos:", sale);
       setEditedSale({
         ...sale,
         cashbackId: sale.saleCashback?.cashback?.id || undefined,
@@ -132,124 +132,42 @@ export default function EditSaleDialog({
     }
   }, [sale]);
 
-  const ensureDateFormat = (date: string | Date | null | undefined): string => {
-    if (!date || date === "") return ""; // Permite string vazia
-
-    // Se já está no formato DD/MM/AAAA, retorna como está
-    if (typeof date === "string" && /^\d{2}\/\d{2}\/\d{4}$/.test(date)) {
-      return date;
-    }
-
-    // Se for objeto Date ou ISO string, formata para DD/MM/AAAA
-    const formattedDate = typeof date === "string" ? date : date.toISOString();
-    return formatBackendDateToFrontend(formattedDate);
-  };
-  //busca vendedores
+  // Busca dados necessários
   useEffect(() => {
-    const fetchSallers = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch("/api/saller/list");
-        const data = await response.json();
-        setSallers(data);
+        const [
+          sallersRes,
+          tourOperatorsRes,
+          clientsRes,
+          companionsRes,
+          hostingsRes,
+          ticketsRes,
+        ] = await Promise.all([
+          fetch("/api/saller/list").then((res) => res.json()),
+          fetch("/api/touroperator/list").then((res) => res.json()),
+          fetch("/api/client/list").then((res) => res.json()),
+          fetch("/api/companion/list").then((res) => res.json()),
+          fetch("/api/hosting/list").then((res) => res.json()),
+          fetch("/api/ticket/list").then((res) => res.json()),
+        ]);
+
+        setSallers(sallersRes);
+        setTourOperators(tourOperatorsRes);
+        setClients(clientsRes);
+        setAvailableCompanions(companionsRes);
+        setAvailableHostings(hostingsRes);
+        setAvailableTickets(ticketsRes);
       } catch (error) {
-        console.error("Erro ao buscar vendedores:", error);
+        console.error("Erro ao buscar dados:", error);
+        toast.error("Erro ao carregar dados");
       }
     };
 
-    fetchSallers();
+    fetchData();
   }, []);
 
-  //busca operadoras
-  useEffect(() => {
-    const fetchTourOperator = async () => {
-      try {
-        const response = await fetch("/api/touroperator/list");
-        const data = await response.json();
-        setTourOperator(data);
-      } catch (error) {
-        console.error("Erro ao buscar vendedores:", error);
-      }
-    };
-
-    fetchTourOperator();
-  }, []);
-
-  //busca cliente
-  useEffect(() => {
-    const fetchClient = async () => {
-      try {
-        const response = await fetch("/api/client/list");
-        const data = await response.json();
-        setClient(data);
-      } catch (error) {
-        console.error("Erro ao buscar clientes:", error);
-      }
-    };
-
-    fetchClient();
-  }, []);
-
-  //busca cashback
-  // useEffect(() => {
-  //   const fetchCashback = async () => {
-  //     try {
-  //       const response = await fetch("/api/cashback/list");
-  //       const data = await response.json();
-  //       setCashback(data);
-  //     } catch (error) {
-  //       console.error("Erro ao buscar Cashback:", error);
-  //     }
-  //   };
-
-  //   fetchCashback();
-  // }, []);
-
-  // Busca acompanhantes
-  useEffect(() => {
-    const fetchCompanions = async () => {
-      try {
-        const response = await fetch("/api/companion/list");
-        const data = await response.json();
-        setAvailableCompanions(data);
-      } catch (error) {
-        console.error("Erro ao buscar acompanhantes:", error);
-      }
-    };
-
-    fetchCompanions();
-  }, []);
-
-  // Busca hospedagens
-  useEffect(() => {
-    const fetchHostings = async () => {
-      try {
-        const response = await fetch("/api/hosting/list");
-        const data = await response.json();
-        setAvailableHostings(data);
-      } catch (error) {
-        console.error("Erro ao buscar hospedagens:", error);
-      }
-    };
-
-    fetchHostings();
-  }, []);
-
-  // Busca ingressos
-  useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const response = await fetch("/api/ticket/list");
-        const data = await response.json();
-        setAvailableTickets(data);
-      } catch (error) {
-        console.error("Erro ao buscar ingressos:", error);
-      }
-    };
-
-    fetchTickets();
-  }, []);
-
-  // Função para adicionar hospedagem
+  // Manipulação de hospedagens
   const handleAddHosting = () => {
     if (!newHosting.hostingId || !newHosting.rooms || !newHosting.price) {
       toast.error("Preencha todos os campos");
@@ -258,20 +176,19 @@ export default function EditSaleDialog({
 
     const priceNumber = parseFloat(newHosting.price.replace(",", "."));
 
-    setEditedSale({
-      ...editedSale,
+    setEditedSale((prev) => ({
+      ...prev,
       saleHosting: [
-        ...(editedSale.saleHosting || []),
+        ...(prev.saleHosting || []),
         {
           hostingId: newHosting.hostingId,
           rooms: newHosting.rooms,
           price: priceNumber,
-          id: Date.now(), // ID temporário
+          id: Date.now(),
         },
       ],
-    });
+    }));
 
-    // Reset form
     setNewHosting({
       hostingId: 0,
       rooms: 1,
@@ -279,17 +196,14 @@ export default function EditSaleDialog({
     });
   };
 
-  // Função para remover hospedagem
   const handleRemoveHosting = (index: number) => {
-    const newHostings = [...(editedSale.saleHosting || [])];
-    newHostings.splice(index, 1);
-    setEditedSale({
-      ...editedSale,
-      saleHosting: newHostings,
-    });
+    setEditedSale((prev) => ({
+      ...prev,
+      saleHosting: (prev.saleHosting || []).filter((_, i) => i !== index),
+    }));
   };
 
-  // Função para adicionar ingresso
+  // Manipulação de ingressos
   const handleAddTicket = () => {
     if (!newTicket.date || !newTicket.ticketId || !newTicket.price) {
       toast.error("Preencha data, ingresso e valor");
@@ -298,23 +212,22 @@ export default function EditSaleDialog({
 
     const priceNumber = parseFloat(newTicket.price.replace(",", "."));
 
-    setEditedSale({
-      ...editedSale,
+    setEditedSale((prev) => ({
+      ...prev,
       saleTicket: [
-        ...(editedSale.saleTicket || []),
+        ...(prev.saleTicket || []),
         {
           ticketId: newTicket.ticketId,
-          date: newTicket.date,
+          date: formatDateWithSlashes(newTicket.date),
           adults: newTicket.adults,
           kids: newTicket.kids,
           halfPriceTicket: newTicket.halfPriceTicket,
           price: priceNumber,
-          id: Date.now(), // ID temporário
+          id: Date.now(),
         },
       ],
-    });
+    }));
 
-    // Reset form
     setNewTicket({
       date: "",
       ticketId: 0,
@@ -325,16 +238,14 @@ export default function EditSaleDialog({
     });
   };
 
-  // Função para remover ingresso
   const handleRemoveTicket = (index: number) => {
-    const newTickets = [...(editedSale.saleTicket || [])];
-    newTickets.splice(index, 1);
-    setEditedSale({
-      ...editedSale,
-      saleTicket: newTickets,
-    });
+    setEditedSale((prev) => ({
+      ...prev,
+      saleTicket: (prev.saleTicket || []).filter((_, i) => i !== index),
+    }));
   };
 
+  // Atualização da venda
   const handleUpdateSale = async () => {
     setIsLoading(true);
     try {
@@ -343,7 +254,11 @@ export default function EditSaleDialog({
         return;
       }
 
-      // Prepara os dados no formato que a API espera
+      const prepareDateForBackend = (date: string | undefined): string => {
+        if (!date) return "";
+        return date.includes("/") ? date : formatDateWithSlashes(date);
+      };
+
       const updateData = {
         id: editedSale.id,
         idInTourOperator: editedSale.idInTourOperator,
@@ -351,10 +266,9 @@ export default function EditSaleDialog({
         tourOperatorId: editedSale.tourOperatorId,
         clientId: editedSale.clientId,
         paymentMethod: editedSale.paymentMethod,
-        // Envia as datas exatamente como estão (strings no formato DD/MM/AAAA)
-        saleDate: editedSale.saleDate,
-        checkIn: editedSale.checkIn,
-        checkOut: editedSale.checkOut,
+        saleDate: prepareDateForBackend(editedSale.saleDate),
+        checkIn: prepareDateForBackend(editedSale.checkIn),
+        checkOut: prepareDateForBackend(editedSale.checkOut),
         ticketDiscount:
           editedSale.ticketDiscount?.toString().replace(".", ",") || "0,00",
         hostingDiscount:
@@ -375,8 +289,7 @@ export default function EditSaleDialog({
         tickets:
           editedSale.saleTicket?.map((t) => ({
             ticketId: t.ticketId,
-            // Envia a data do ingresso exatamente como está
-            date: t.date,
+            date: prepareDateForBackend(t.date),
             adults: t.adults,
             kids: t.kids,
             halfPriceTicket: t.halfPriceTicket,
@@ -384,23 +297,19 @@ export default function EditSaleDialog({
           })) || [],
         invoice: {
           issuedInvoice: editedSale.invoice?.issuedInvoice || "PENDENTE",
-          // Envia as datas da nota fiscal exatamente como estão
-          estimatedIssueDate: editedSale.invoice?.estimatedIssueDate,
+          estimatedIssueDate: prepareDateForBackend(
+            editedSale.invoice?.estimatedIssueDate,
+          ),
           invoiceNumber: editedSale.invoice?.invoiceNumber,
-          invoiceDate: editedSale.invoice?.invoiceDate,
-          expectedReceiptDate: editedSale.invoice?.expectedReceiptDate,
+          invoiceDate: prepareDateForBackend(editedSale.invoice?.invoiceDate),
+          expectedReceiptDate: prepareDateForBackend(
+            editedSale.invoice?.expectedReceiptDate,
+          ),
           invoiceReceived: editedSale.invoice?.invoiceReceived || "PENDENTE",
-          receiptDate: editedSale.invoice?.receiptDate,
+          receiptDate: prepareDateForBackend(editedSale.invoice?.receiptDate),
         },
       };
 
-      // LOG PARA VERIFICAR O QUE ESTÁ SENDO ENVIADO (FRONTEND)
-      console.log(
-        "🔄 Dados enviados para o backend:",
-        JSON.stringify(updateData, null, 2),
-      );
-
-      // Envia para a API
       const response = await fetch("/api/sale/update", {
         method: "PUT",
         headers: {
@@ -418,31 +327,12 @@ export default function EditSaleDialog({
       onClose();
     } catch (error) {
       console.error("Erro ao atualizar venda:", error);
-      toast.error("Erro ao atualizar venda");
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao atualizar venda",
+      );
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatCurrencyForInput = (value: string): string => {
-    // Remove tudo que não for dígito
-    let digits = value.replace(/\D/g, "");
-
-    // Adiciona zeros à esquerda se necessário para ter pelo menos 3 dígitos
-    digits = digits.padStart(3, "0");
-
-    // Formata como centavos
-    let formatted = digits.replace(/(\d{2})$/, ",$1");
-
-    // Adiciona pontos para milhares
-    formatted = formatted.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
-
-    // Remove zeros à esquerda desnecessários (exceto para "0,00")
-    if (formatted.startsWith("0") && formatted.length > 4) {
-      formatted = formatted.replace(/^0+/, "");
-    }
-
-    return formatted;
   };
 
   return (
@@ -470,11 +360,15 @@ export default function EditSaleDialog({
               } rounded`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === "gerais" && "Gerais"}
-              {tab === "acompanhantes" && "Acompanhantes"}
-              {tab === "hospedagem" && "Hospedagens"}
-              {tab === "ingresso" && "Ingressos"}
-              {tab === "nt-fiscal" && "Nota Fiscal"}
+              {
+                {
+                  gerais: "Gerais",
+                  acompanhantes: "Acompanhantes",
+                  hospedagem: "Hospedagens",
+                  ingresso: "Ingressos",
+                  "nt-fiscal": "Nota Fiscal",
+                }[tab]
+              }
             </button>
           ))}
         </div>
@@ -482,7 +376,6 @@ export default function EditSaleDialog({
         <ScrollArea className="h-[400px] overflow-auto">
           {activeTab === "gerais" && (
             <div className="space-y-4 p-5">
-              {/* ID na operadora */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">ID na Operadora</Label>
                 <Input
@@ -497,7 +390,6 @@ export default function EditSaleDialog({
                 />
               </div>
 
-              {/* vendedor     */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Vendedor</Label>
                 <select
@@ -519,18 +411,26 @@ export default function EditSaleDialog({
                 </select>
               </div>
 
-              {/* forma de pagamento     */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Forma de Pagamento</Label>
-                <select className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                  <option>Pix</option>
-                  <option>Dinheiro</option>
-                  <option>Débito</option>
-                  <option>Crédito</option>
+                <select
+                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={editedSale.paymentMethod || ""}
+                  onChange={(e) =>
+                    setEditedSale({
+                      ...editedSale,
+                      paymentMethod: e.target.value as PaymentMethodType,
+                    })
+                  }
+                >
+                  <option value="">Selecione</option>
+                  <option value="PIX">Pix</option>
+                  <option value="DINHEIRO">Dinheiro</option>
+                  <option value="DEBITO">Débito</option>
+                  <option value="CREDITO">Crédito</option>
                 </select>
               </div>
 
-              {/* operadora     */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Operadora</Label>
                 <select
@@ -544,81 +444,62 @@ export default function EditSaleDialog({
                   }
                 >
                   <option value="">Selecione</option>
-                  {tourOperator.map((tourOperator) => (
-                    <option key={tourOperator.id} value={tourOperator.id}>
-                      {tourOperator.name}
+                  {tourOperators.map((operator) => (
+                    <option key={operator.id} value={operator.id}>
+                      {operator.name}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* data da venda     */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Data da Venda</Label>
                 <IMaskInput
                   mask="00/00/0000"
                   className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={
-                    editedSale.saleDate === ""
-                      ? ""
-                      : typeof editedSale.saleDate === "string" &&
-                          editedSale.saleDate.includes("/")
-                        ? editedSale.saleDate
-                        : formatBackendDateToFrontend(editedSale.saleDate || "")
+                  value={editedSale.saleDate || ""}
+                  onAccept={(value) =>
+                    setEditedSale({
+                      ...editedSale,
+                      saleDate: formatDateWithSlashes(value),
+                    })
                   }
-                  onAccept={(value, mask) => {
-                    // Permite campo vazio
-                    if (value === "" || mask.unmaskedValue === "") {
-                      setEditedSale({ ...editedSale, saleDate: "" });
-                    } else {
-                      setEditedSale({ ...editedSale, saleDate: value });
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Backspace" && editedSale.saleDate === "") {
-                      e.preventDefault(); // Evita comportamento padrão quando já está vazio
-                    }
-                  }}
+                  unmask={true}
                 />
               </div>
 
-              {/* checkin         */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Check-in</Label>
                 <IMaskInput
                   mask="00/00/0000"
                   className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={
-                    typeof editedSale.checkIn === "string" &&
-                    editedSale.checkIn.includes("/")
-                      ? editedSale.checkIn
-                      : formatBackendDateToFrontend(editedSale.checkIn || "")
-                  }
+                  value={editedSale.checkIn || ""}
                   onAccept={(value) =>
-                    setEditedSale({ ...editedSale, checkIn: value })
+                    setEditedSale({
+                      ...editedSale,
+                      checkIn: formatDateWithSlashes(value),
+                    })
                   }
+                  unmask={true}
                 />
               </div>
 
-              {/* CHECKOUT */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Check-out</Label>
                 <IMaskInput
                   mask="00/00/0000"
                   className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={
-                    typeof editedSale.checkOut === "string" &&
-                    editedSale.checkOut.includes("/")
-                      ? editedSale.checkOut
-                      : formatBackendDateToFrontend(editedSale.checkOut || "")
-                  }
+                  value={editedSale.checkOut || ""}
                   onAccept={(value) =>
-                    setEditedSale({ ...editedSale, checkOut: value })
+                    setEditedSale({
+                      ...editedSale,
+                      checkOut: formatDateWithSlashes(value),
+                    })
                   }
+                  unmask={true}
                 />
               </div>
 
-              {/* CLIENTE */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Cliente</Label>
                 <select
@@ -632,7 +513,7 @@ export default function EditSaleDialog({
                   }
                 >
                   <option value="">Selecione</option>
-                  {client.map((client) => (
+                  {clients.map((client) => (
                     <option key={client.id} value={client.id}>
                       {client.name}
                     </option>
@@ -640,7 +521,6 @@ export default function EditSaleDialog({
                 </select>
               </div>
 
-              {/* desconto ingressos */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Desconto Ingressos</Label>
                 <Input
@@ -655,7 +535,6 @@ export default function EditSaleDialog({
                 />
               </div>
 
-              {/* desconto hospedagem */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Desconto Hospedagem</Label>
                 <Input
@@ -670,37 +549,12 @@ export default function EditSaleDialog({
                 />
               </div>
 
-              {/* CASHBACK */}
-              {/* <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Cashback</Label>
-                <select
-                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={editedSale.cashbackId || ""} // Garanta que está usando o valor correto
-                  onChange={(e) =>
-                    setEditedSale({
-                      ...editedSale,
-                      cashbackId: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    })
-                  }
-                >
-                  <option value="">Selecione</option>
-                  {cashback.map((cashback) => (
-                    <option key={cashback.id} value={cashback.id}>
-                      {cashback.name}
-                    </option>
-                  ))}
-                </select>
-              </div> */}
-
-              {/* OBSERVACAO */}
               <div className="grid grid-cols-4 gap-4">
                 <Label className="self-start pt-2 text-right">Observação</Label>
                 <textarea
                   className="col-span-3 rounded-md border p-2"
                   rows={4}
-                  value={editedSale.observation}
+                  value={editedSale.observation || ""}
                   onChange={(e) =>
                     setEditedSale({
                       ...editedSale,
@@ -710,7 +564,6 @@ export default function EditSaleDialog({
                 />
               </div>
 
-              {/* Venda Cancelada */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Venda Cancelada</Label>
                 <div className="col-span-3 flex gap-4">
@@ -720,10 +573,7 @@ export default function EditSaleDialog({
                       name="canceledSale"
                       checked={editedSale.canceledSale === true}
                       onChange={() =>
-                        setEditedSale({
-                          ...editedSale,
-                          canceledSale: true,
-                        })
+                        setEditedSale({ ...editedSale, canceledSale: true })
                       }
                     />
                     Sim
@@ -734,10 +584,7 @@ export default function EditSaleDialog({
                       name="canceledSale"
                       checked={editedSale.canceledSale === false}
                       onChange={() =>
-                        setEditedSale({
-                          ...editedSale,
-                          canceledSale: false,
-                        })
+                        setEditedSale({ ...editedSale, canceledSale: false })
                       }
                     />
                     Não
@@ -822,7 +669,6 @@ export default function EditSaleDialog({
 
           {activeTab === "hospedagem" && (
             <div className="space-y-4 p-5">
-              {/* Formulário para nova hospedagem */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Hospedagem</Label>
                 <select
@@ -865,23 +711,17 @@ export default function EditSaleDialog({
                 <Label className="text-right">Valor</Label>
                 <Input
                   value={newHosting.price}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  onChange={(e) => {
                     const digits = e.target.value.replace(/\D/g, "");
                     const formatted = formatCurrencyForInput(digits);
-                    setNewHosting({
-                      ...newHosting,
-                      price: formatted,
-                    });
+                    setNewHosting({ ...newHosting, price: formatted });
                   }}
-                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                  onBlur={(e) => {
                     if (!e.target.value.includes(",")) {
                       const formatted = formatCurrencyForInput(
                         e.target.value + "00",
                       );
-                      setNewHosting({
-                        ...newHosting,
-                        price: formatted,
-                      });
+                      setNewHosting({ ...newHosting, price: formatted });
                     }
                   }}
                   className="col-span-3"
@@ -898,7 +738,6 @@ export default function EditSaleDialog({
                 </button>
               </div>
 
-              {/* Lista de hospedagens existentes */}
               <div className="space-y-2">
                 {editedSale.saleHosting?.map((hosting, index) => {
                   const hostingInfo = availableHostings.find(
@@ -934,16 +773,18 @@ export default function EditSaleDialog({
 
           {activeTab === "ingresso" && (
             <div className="space-y-4 p-5">
-              {/* Formulário para novo ingresso */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Data</Label>
                 <IMaskInput
                   mask="00/00/0000"
                   value={newTicket.date}
                   onAccept={(value) =>
-                    setNewTicket({ ...newTicket, date: value })
+                    setNewTicket({
+                      ...newTicket,
+                      date: formatDateWithSlashes(value),
+                    })
                   }
-                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="col-span-3"
                 />
               </div>
 
@@ -1027,23 +868,17 @@ export default function EditSaleDialog({
                 <Label className="text-right">Valor</Label>
                 <Input
                   value={newTicket.price}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  onChange={(e) => {
                     const digits = e.target.value.replace(/\D/g, "");
                     const formatted = formatCurrencyForInput(digits);
-                    setNewTicket({
-                      ...newTicket,
-                      price: formatted,
-                    });
+                    setNewTicket({ ...newTicket, price: formatted });
                   }}
-                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                  onBlur={(e) => {
                     if (!e.target.value.includes(",")) {
                       const formatted = formatCurrencyForInput(
                         e.target.value + "00",
                       );
-                      setNewTicket({
-                        ...newTicket,
-                        price: formatted,
-                      });
+                      setNewTicket({ ...newTicket, price: formatted });
                     }
                   }}
                   className="col-span-3"
@@ -1060,7 +895,6 @@ export default function EditSaleDialog({
                 </button>
               </div>
 
-              {/* Lista de ingressos existentes */}
               <div className="space-y-2">
                 {editedSale.saleTicket?.map((ticket, index) => {
                   const ticketInfo = availableTickets.find(
@@ -1106,7 +940,6 @@ export default function EditSaleDialog({
 
           {activeTab === "nt-fiscal" && (
             <div className="space-y-4 p-5">
-              {/* NF emitida? */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">NF emitida?</Label>
                 <select
@@ -1129,7 +962,6 @@ export default function EditSaleDialog({
                 </select>
               </div>
 
-              {/* Data prevista para emissão */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Data prevista para emissão</Label>
                 <IMaskInput
@@ -1140,15 +972,14 @@ export default function EditSaleDialog({
                       ...editedSale,
                       invoice: {
                         ...editedSale.invoice,
-                        estimatedIssueDate: value,
+                        estimatedIssueDate: formatDateWithSlashes(value),
                       },
                     })
                   }
-                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="col-span-3"
                 />
               </div>
 
-              {/* Número da NF */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Número da NF</Label>
                 <Input
@@ -1166,7 +997,6 @@ export default function EditSaleDialog({
                 />
               </div>
 
-              {/* Data da NF */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Data da NF</Label>
                 <IMaskInput
@@ -1177,15 +1007,14 @@ export default function EditSaleDialog({
                       ...editedSale,
                       invoice: {
                         ...editedSale.invoice,
-                        invoiceDate: value,
+                        invoiceDate: formatDateWithSlashes(value),
                       },
                     })
                   }
-                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="col-span-3"
                 />
               </div>
 
-              {/* Data prevista para o recebimento */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="w-[240px] text-right">
                   Data prevista para o recebimento
@@ -1198,15 +1027,14 @@ export default function EditSaleDialog({
                       ...editedSale,
                       invoice: {
                         ...editedSale.invoice,
-                        expectedReceiptDate: value,
+                        expectedReceiptDate: formatDateWithSlashes(value),
                       },
                     })
                   }
-                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="col-span-3"
                 />
               </div>
 
-              {/* NF Recebida? */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">NF Recebida?</Label>
                 <select
@@ -1229,7 +1057,6 @@ export default function EditSaleDialog({
                 </select>
               </div>
 
-              {/* Data de recebimento */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Data de recebimento</Label>
                 <IMaskInput
@@ -1240,11 +1067,11 @@ export default function EditSaleDialog({
                       ...editedSale,
                       invoice: {
                         ...editedSale.invoice,
-                        receiptDate: value,
+                        receiptDate: formatDateWithSlashes(value),
                       },
                     })
                   }
-                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="col-span-3"
                 />
               </div>
             </div>

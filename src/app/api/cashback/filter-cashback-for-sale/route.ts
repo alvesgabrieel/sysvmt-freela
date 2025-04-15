@@ -1,4 +1,5 @@
-import { Prisma } from "@prisma/client"; // Adicionando os tipos do Prisma
+// Atualize sua API (/api/cashback/filter-cashback-for-sale)
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/prisma";
@@ -9,8 +10,10 @@ export async function GET(req: Request) {
     const saleId = searchParams.get("saleId");
     const clientName = searchParams.get("clientName");
 
-    // Definindo `whereCondition` como Prisma.SaleWhereInput
-    const whereCondition: Prisma.SaleWhereInput = {};
+    const whereCondition: Prisma.SaleWhereInput = {
+      // Apenas vendas que TEM um registro de cashback (não importa o status)
+      saleCashback: { isNot: null },
+    };
 
     if (saleId) {
       whereCondition.id = Number(saleId);
@@ -27,7 +30,6 @@ export async function GET(req: Request) {
       };
     }
 
-    // Consulta ao banco de dados com filtro correto
     const sales = await db.sale.findMany({
       where: whereCondition,
       select: {
@@ -49,8 +51,10 @@ export async function GET(req: Request) {
       },
     });
 
-    // Mapeando os dados para a resposta
-    const result = sales.map((sale) => ({
+    // Filtra apenas resultados onde saleCashback existe
+    const filteredSales = sales.filter((sale) => sale.saleCashback !== null);
+
+    const result = filteredSales.map((sale) => ({
       saleId: sale.id,
       saleDate: sale.saleDate,
       clientName: sale.client?.name || "Sem Cliente",

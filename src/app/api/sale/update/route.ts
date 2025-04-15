@@ -12,16 +12,16 @@ interface CompanionRequest {
 interface HostingRequest {
   hostingId: number;
   rooms: number;
-  price: string; // Formato "1.200,50"
+  price: string;
 }
 
 interface TicketRequest {
   ticketId: number;
-  date: string; // Formato "dd/mm/aaaa"
+  date: string;
   adults: number;
   kids: number;
   halfPriceTicket: number;
-  price: string; // Formato "1.500,99"
+  price: string;
 }
 
 interface InvoiceRequest {
@@ -68,7 +68,7 @@ export async function PUT(request: Request) {
 
     const result = await db.$transaction(
       async (prisma) => {
-        // 1. Buscar a venda existente para verificar se precisa recalcular cashback
+        // 1. Buscar a venda existente
         const existingSale = await prisma.sale.findUnique({
           where: { id: body.id },
           include: {
@@ -82,7 +82,18 @@ export async function PUT(request: Request) {
           throw new Error("Venda não encontrada");
         }
 
-        // 2. Recalcular totais (como no POST)
+        // Função auxiliar para formatar datas para comparação
+        function formatDateToCompare(date: Date): string {
+          return date.toISOString().split("T")[0];
+        }
+
+        // 2. Verificar mudanças nas datas relevantes para cashback
+        const dateChanged =
+          body.saleDate !== formatDateToCompare(existingSale.saleDate) ||
+          body.checkIn !== formatDateToCompare(existingSale.checkIn) ||
+          body.checkOut !== formatDateToCompare(existingSale.checkOut);
+
+        // 3. Recalcular totais
         const totalHostings =
           body.hostings?.reduce((sum, hosting) => {
             return sum + parseBrazilianNumber(hosting.price);
@@ -99,7 +110,7 @@ export async function PUT(request: Request) {
         const totalDiscount = ticketDiscount + hostingDiscount;
         const netTotal = grossTotal - totalDiscount;
 
-        // 3. Recalcular comissões (como no POST)
+        // 4. Recalcular comissões
         const sallerCommission = await prisma.sallerCommission.findFirst({
           where: {
             sallerId: body.sallerId,
@@ -143,7 +154,7 @@ export async function PUT(request: Request) {
         const agencyCommissionValue =
           agencyCommissionValueHosting + agencyCommissionValueTicket;
 
-        // 4. Atualizar a venda principal com os novos cálculos
+        // 5. Atualizar a venda principal
         const updatedSale = await prisma.sale.update({
           where: { id: body.id },
           data: {
@@ -167,7 +178,7 @@ export async function PUT(request: Request) {
           },
         });
 
-        // 5. Atualizar relacionamentos (como antes)
+        // 6. Atualizar relacionamentos
         await prisma.saleCompanion.deleteMany({ where: { saleId: body.id } });
         if (body.companions?.length) {
           await prisma.saleCompanion.createMany({
@@ -205,23 +216,49 @@ export async function PUT(request: Request) {
           });
         }
 
-        // 6. Lógica de Cashback (como no POST)
-        let totalCashback = 0;
+        // 7. Lógica de Cashback - Parte 1: Atualizar validade se datas mudaram
+        let totalCashback = existingSale.totalCashback || 0;
         let saleCashback = existingSale.saleCashback;
 
-        // Verifica se precisa atualizar o cashback
+        if (existingSale.saleCashback && dateChanged) {
+          const cashback = await prisma.cashback.findUnique({
+            where: { id: existingSale.saleCashback.cashbackId },
+          });
+
+          if (cashback) {
+            let startDate: Date;
+            switch (cashback.selectType) {
+              case "PURCHASEDATE":
+                startDate = parseBrazilianDate(body.saleDate);
+                break;
+              case "CHECKIN":
+                startDate = parseBrazilianDate(body.checkIn);
+                break;
+              case "CHECKOUT":
+                startDate = parseBrazilianDate(body.checkOut);
+                break;
+              default:
+                startDate = parseBrazilianDate(body.saleDate);
+            }
+
+            const expiryDate = new Date(startDate);
+            expiryDate.setDate(expiryDate.getDate() + cashback.validityDays);
+            expiryDate.setHours(23, 59, 59, 999);
+
+            saleCashback = await prisma.saleCashback.update({
+              where: { id: existingSale.saleCashback.id },
+              data: {
+                expiryDate,
+              },
+            });
+          }
+        }
+
+        // 8. Lógica de Cashback - Parte 2: Adicionar/Remover cashback
         const cashbackChanged =
           body.cashbackId !== existingSale.saleCashback?.cashbackId ||
           body.paymentMethod !== existingSale.paymentMethod ||
-          body.saleDate !== formatDateToCompare(existingSale.saleDate) ||
-          body.checkIn !== formatDateToCompare(existingSale.checkIn) ||
-          body.checkOut !== formatDateToCompare(existingSale.checkOut) ||
           grossTotal !== existingSale.grossTotal;
-
-        // Função auxiliar para formatar datas para comparação
-        function formatDateToCompare(date: Date): string {
-          return date.toISOString().split("T")[0];
-        }
 
         if (body.cashbackId && cashbackChanged) {
           const cashback = await prisma.cashback.findUnique({
@@ -248,10 +285,9 @@ export async function PUT(request: Request) {
             expiryDate.setDate(expiryDate.getDate() + cashback.validityDays);
             expiryDate.setHours(23, 59, 59, 999);
 
-            totalCashback = grossTotal * (cashback.percentage / 100);
+            totalCashback = netTotal * (cashback.percentage / 100);
 
             if (existingSale.saleCashback) {
-              // Atualiza cashback existente
               saleCashback = await prisma.saleCashback.update({
                 where: { id: existingSale.saleCashback.id },
                 data: {
@@ -261,7 +297,6 @@ export async function PUT(request: Request) {
                 },
               });
             } else {
-              // Cria novo cashback
               saleCashback = await prisma.saleCashback.create({
                 data: {
                   saleId: body.id,
@@ -274,14 +309,14 @@ export async function PUT(request: Request) {
             }
           }
         } else if (!body.cashbackId && existingSale.saleCashback) {
-          // Remove cashback se foi desmarcado
           await prisma.saleCashback.delete({
             where: { id: existingSale.saleCashback.id },
           });
           saleCashback = null;
+          totalCashback = 0;
         }
 
-        // Atualiza totalCashback na venda
+        // Atualizar totalCashback na venda
         await prisma.sale.update({
           where: { id: body.id },
           data: {
@@ -289,7 +324,7 @@ export async function PUT(request: Request) {
           },
         });
 
-        // 7. Atualizar nota fiscal (como antes)
+        // 9. Atualizar nota fiscal
         const invoice = await prisma.invoice.upsert({
           where: { saleId: body.id },
           update: {
