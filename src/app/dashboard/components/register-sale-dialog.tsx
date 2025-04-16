@@ -18,6 +18,11 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sale } from "@/types/sale";
 
+interface ItemComNome {
+  id: number;
+  name: string;
+}
+
 interface SallerCommission {
   tourOperator: TourOperator;
 }
@@ -756,6 +761,60 @@ export default function RegisterSaleDialog({
     }
   };
 
+  //FUnção para resumo da venda
+  const getResumoVenda = () => {
+    // Formata valores monetários
+    const formatCurrency = (value: string) => {
+      return value ? `R$ ${value}` : "R$ 0,00";
+    };
+
+    // Encontra nomes pelos IDs
+    const getNomePorId = (id: number, lista: ItemComNome[]) => {
+      return lista.find((item) => item.id === id)?.name || "Não encontrado";
+    };
+
+    return {
+      gerais: {
+        "ID na Operadora": formData.idInTourOperator,
+        Vendedor: getNomePorId(Number(formData.sallerId), sallers),
+        Operadora: getNomePorId(Number(formData.tourOperatorId), tourOperators),
+        Cliente: getNomePorId(Number(formData.clientId), clients),
+        "Forma de Pagamento": formData.paymentMethod,
+        "Data da Venda": formData.saleDate,
+        "Check-in": formData.checkIn,
+        "Check-out": formData.checkOut,
+        "Desconto Ingresso": formatCurrency(formData.ticketDiscount),
+        "Desconto Hospedagem": formatCurrency(formData.hostingDiscount),
+        Observações: formData.observation || "Nenhuma",
+      },
+      acompanhantes: acompanhantes.filter((a) => a.id > 0).map((a) => a.name),
+      hospedagens: registrosHospedagem.map((h) => ({
+        Hospedagem: h.name,
+        Quartos: h.quartos,
+        Valor: formatCurrency(h.valor),
+      })),
+      ingressos: registrosIngresso.map((i) => {
+        const ticket = allTickets.find((t) => t.id === i.ticketId);
+        return {
+          Data: i.data,
+          Ingresso: ticket?.name || "Não encontrado",
+          Adultos: i.adulto,
+          Crianças: i.crianca,
+          Meias: i.meia,
+          Valor: formatCurrency(i.valoringresso),
+        };
+      }),
+      notaFiscal: {
+        "NF Emitida?": formData.invoice.issuedInvoice,
+        "Data Prevista Emissão": formData.invoice.estimatedIssueDate,
+        "Número NF": formData.invoice.invoiceNumber,
+        "Data NF": formData.invoice.invoiceDate,
+        "NF Recebida?": formData.invoice.invoiceReceived,
+        "Data Recebimento": formData.invoice.receiptDate,
+      },
+    };
+  };
+
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
@@ -768,6 +827,7 @@ export default function RegisterSaleDialog({
           <DialogTitle>Cadastrar venda</DialogTitle>
         </DialogHeader>
 
+        {/* Botões de navegação */}
         <div className="mb-6 mt-4 flex space-x-4">
           <button
             className={`px-4 py-2 ${
@@ -775,7 +835,7 @@ export default function RegisterSaleDialog({
             } rounded`}
             onClick={() => handleTabChange("gerais")}
           >
-            Gerais
+            Geral
           </button>
           <button
             className={`px-4 py-2 ${
@@ -816,6 +876,14 @@ export default function RegisterSaleDialog({
             onClick={() => handleTabChange("nt-fiscal")}
           >
             Nota Fiscal
+          </button>
+          <button
+            className={`px-4 py-2 ${
+              activeTab === "resumo" ? "bg-blue-500 text-white" : "bg-gray-200"
+            } rounded`}
+            onClick={() => handleTabChange("resumo")}
+          >
+            Resumo
           </button>
         </div>
 
@@ -1514,6 +1582,99 @@ export default function RegisterSaleDialog({
                     handleInvoiceChange("receiptDate", value as string)
                   }
                 />
+              </div>
+            </div>
+          )}
+
+          {activeTab === "resumo" && (
+            <div className="space-y-6 p-5">
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-3 text-lg font-semibold">
+                  Informações Gerais
+                </h3>
+                {Object.entries(getResumoVenda().gerais).map(([key, value]) => (
+                  <div key={key} className="grid grid-cols-3 gap-4 py-1">
+                    <span className="font-medium text-gray-600">{key}:</span>
+                    <span className="col-span-2">{value || "-"}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-3 text-lg font-semibold">Acompanhantes</h3>
+                {getResumoVenda().acompanhantes.length > 0 ? (
+                  <ul className="list-disc pl-5">
+                    {getResumoVenda().acompanhantes.map((nome, index) => (
+                      <li key={index}>{nome}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500">
+                    Nenhum acompanhante adicionado
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-3 text-lg font-semibold">Hospedagens</h3>
+                {getResumoVenda().hospedagens.length > 0 ? (
+                  <div className="space-y-3">
+                    {getResumoVenda().hospedagens.map((hospedagem, index) => (
+                      <div key={index} className="rounded border p-3">
+                        {Object.entries(hospedagem).map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="grid grid-cols-3 gap-4 py-1"
+                          >
+                            <span className="font-medium text-gray-600">
+                              {key}:
+                            </span>
+                            <span className="col-span-2">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Nenhuma hospedagem adicionada</p>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-3 text-lg font-semibold">Ingressos</h3>
+                {getResumoVenda().ingressos.length > 0 ? (
+                  <div className="space-y-3">
+                    {getResumoVenda().ingressos.map((ingresso, index) => (
+                      <div key={index} className="rounded border p-3">
+                        {Object.entries(ingresso).map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="grid grid-cols-3 gap-4 py-1"
+                          >
+                            <span className="font-medium text-gray-600">
+                              {key}:
+                            </span>
+                            <span className="col-span-2">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Nenhum ingresso adicionado</p>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-3 text-lg font-semibold">Nota Fiscal</h3>
+                {Object.entries(getResumoVenda().notaFiscal).map(
+                  ([key, value]) => (
+                    <div key={key} className="grid grid-cols-3 gap-4 py-1">
+                      <span className="font-medium text-gray-600">{key}:</span>
+                      <span className="col-span-2">{value || "-"}</span>
+                    </div>
+                  ),
+                )}
               </div>
             </div>
           )}

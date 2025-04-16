@@ -335,6 +335,83 @@ export default function EditSaleDialog({
     }
   };
 
+  //função para o resumo da venda
+  const getResumoVenda = () => {
+    // Formata valores monetários
+    const formatCurrencyDisplay = (
+      value: number | string | undefined,
+    ): string => {
+      if (!value) return "R$ 0,00";
+      if (typeof value === "string") {
+        return value.includes("R$") ? value : `R$ ${value}`;
+      }
+      return `R$ ${value.toFixed(2).replace(".", ",")}`;
+    };
+
+    // Encontra nomes pelos IDs
+    const getNomePorId = (
+      id: number | undefined,
+      lista: Array<{ id: number; name: string }>,
+    ): string => {
+      if (!id) return "Não selecionado";
+      const item = lista.find((item) => item.id === id);
+      return item ? item.name : "Não encontrado";
+    };
+
+    return {
+      gerais: {
+        "ID na Operadora": editedSale.idInTourOperator || "Não informado",
+        Vendedor: getNomePorId(editedSale.sallerId, sallers),
+        Operadora: getNomePorId(editedSale.tourOperatorId, tourOperators),
+        Cliente: getNomePorId(editedSale.clientId, clients),
+        "Forma de Pagamento": editedSale.paymentMethod || "Não informado",
+        "Data da Venda": editedSale.saleDate || "Não informado",
+        "Check-in": editedSale.checkIn || "Não informado",
+        "Check-out": editedSale.checkOut || "Não informado",
+        "Desconto Ingresso": formatCurrencyDisplay(editedSale.ticketDiscount),
+        "Desconto Hospedagem": formatCurrencyDisplay(
+          editedSale.hostingDiscount,
+        ),
+        Observações: editedSale.observation || "Nenhuma",
+        "Venda Cancelada": editedSale.canceledSale ? "Sim" : "Não",
+      },
+      acompanhantes:
+        editedSale.companions?.map((c) =>
+          getNomePorId(c.companionId, availableCompanions),
+        ) || [],
+      hospedagens:
+        editedSale.saleHosting?.map((h) => {
+          const hosting = availableHostings.find((ah) => ah.id === h.hostingId);
+          return {
+            Hospedagem: hosting?.name || "Não encontrada",
+            Quartos: h.rooms,
+            Valor: formatCurrencyDisplay(h.price),
+          };
+        }) || [],
+      ingressos:
+        editedSale.saleTicket?.map((t) => {
+          const ticket = availableTickets.find((at) => at.id === t.ticketId);
+          return {
+            Data: t.date,
+            Ingresso: ticket?.name || "Não encontrado",
+            Adultos: t.adults,
+            Crianças: t.kids,
+            Meias: t.halfPriceTicket,
+            Valor: formatCurrencyDisplay(t.price),
+          };
+        }) || [],
+      notaFiscal: {
+        "NF Emitida?": editedSale.invoice?.issuedInvoice || "Não informado",
+        "Data Prevista Emissão":
+          editedSale.invoice?.estimatedIssueDate || "Não informado",
+        "Número NF": editedSale.invoice?.invoiceNumber || "Não informado",
+        "Data NF": editedSale.invoice?.invoiceDate || "Não informado",
+        "NF Recebida?": editedSale.invoice?.invoiceReceived || "Não informado",
+        "Data Recebimento": editedSale.invoice?.receiptDate || "Não informado",
+      },
+    };
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
@@ -352,6 +429,7 @@ export default function EditSaleDialog({
             "hospedagem",
             "ingresso",
             "nt-fiscal",
+            "resumo",
           ].map((tab) => (
             <button
               key={tab}
@@ -367,6 +445,7 @@ export default function EditSaleDialog({
                   hospedagem: "Hospedagens",
                   ingresso: "Ingressos",
                   "nt-fiscal": "Nota Fiscal",
+                  resumo: "Resumo",
                 }[tab]
               }
             </button>
@@ -1073,6 +1152,99 @@ export default function EditSaleDialog({
                   }
                   className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring col-span-3 flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
+              </div>
+            </div>
+          )}
+
+          {activeTab === "resumo" && (
+            <div className="space-y-6 p-5">
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-3 text-lg font-semibold">
+                  Informações Gerais
+                </h3>
+                {Object.entries(getResumoVenda().gerais).map(([key, value]) => (
+                  <div key={key} className="grid grid-cols-3 gap-4 py-1">
+                    <span className="font-medium text-gray-600">{key}:</span>
+                    <span className="col-span-2">{value || "-"}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-3 text-lg font-semibold">Acompanhantes</h3>
+                {getResumoVenda().acompanhantes.length > 0 ? (
+                  <ul className="list-disc pl-5">
+                    {getResumoVenda().acompanhantes.map((nome, index) => (
+                      <li key={index}>{nome}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500">
+                    Nenhum acompanhante adicionado
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-3 text-lg font-semibold">Hospedagens</h3>
+                {getResumoVenda().hospedagens.length > 0 ? (
+                  <div className="space-y-3">
+                    {getResumoVenda().hospedagens.map((hospedagem, index) => (
+                      <div key={index} className="rounded border p-3">
+                        {Object.entries(hospedagem).map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="grid grid-cols-3 gap-4 py-1"
+                          >
+                            <span className="font-medium text-gray-600">
+                              {key}:
+                            </span>
+                            <span className="col-span-2">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Nenhuma hospedagem adicionada</p>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-3 text-lg font-semibold">Ingressos</h3>
+                {getResumoVenda().ingressos.length > 0 ? (
+                  <div className="space-y-3">
+                    {getResumoVenda().ingressos.map((ingresso, index) => (
+                      <div key={index} className="rounded border p-3">
+                        {Object.entries(ingresso).map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="grid grid-cols-3 gap-4 py-1"
+                          >
+                            <span className="font-medium text-gray-600">
+                              {key}:
+                            </span>
+                            <span className="col-span-2">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Nenhum ingresso adicionado</p>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-3 text-lg font-semibold">Nota Fiscal</h3>
+                {Object.entries(getResumoVenda().notaFiscal).map(
+                  ([key, value]) => (
+                    <div key={key} className="grid grid-cols-3 gap-4 py-1">
+                      <span className="font-medium text-gray-600">{key}:</span>
+                      <span className="col-span-2">{value || "-"}</span>
+                    </div>
+                  ),
+                )}
               </div>
             </div>
           )}
