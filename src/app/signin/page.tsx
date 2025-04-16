@@ -28,7 +28,11 @@ export default function SignIn() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [showPassword, setShowPassword] = useState(false); // Estado para alternar a visibilidade da senha
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormData>({
     resolver: zodResolver(formSchema),
   });
 
@@ -36,9 +40,9 @@ export default function SignIn() {
     const token = localStorage.getItem("token");
 
     if (token) {
-      router.replace("/dashboard"); 
+      router.replace("/dashboard");
     } else {
-      setIsAuthenticated(false); 
+      setIsAuthenticated(false);
     }
   }, [router]);
 
@@ -53,12 +57,13 @@ export default function SignIn() {
       const loginResponse = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: data.username, password: data.password }),
+        body: JSON.stringify(data),
       });
 
       if (loginResponse.ok) {
-        const { token } = await loginResponse.json();
+        const { token, user } = await loginResponse.json();
         localStorage.setItem("token", token);
+        localStorage.setItem("userName", user.name);
         router.replace("/dashboard");
         toast.success("Login bem sucedido!");
       } else {
@@ -75,7 +80,7 @@ export default function SignIn() {
 
   return (
     <div className="flex h-screen w-full">
-      <div className="w-1/2 h-full hidden md:block relative">
+      <div className="relative hidden h-full w-1/2 md:block">
         <Image
           src="/image_sign_in.jpg"
           alt="Lighthouse"
@@ -84,9 +89,11 @@ export default function SignIn() {
         />
       </div>
 
-      <div className="w-full md:w-1/2 flex flex-col justify-center items-center px-10">
+      <div className="flex w-full flex-col items-center justify-center px-10 md:w-1/2">
         <div className="w-full max-w-sm">
-          <h2 className="text-2xl font-semibold mb-4">Que bom ver você novamente</h2>
+          <h2 className="mb-4 text-2xl font-semibold">
+            Que bom ver você novamente
+          </h2>
 
           <form onSubmit={handleSubmit(handleLogin)} className="space-y-4">
             <div>
@@ -96,7 +103,11 @@ export default function SignIn() {
                 {...register("username")}
                 className={`border ${errors.username ? "border-red-500" : "border-gray-300"}`}
               />
-              {errors.username && <p className="text-red-500 text-sm">{errors.username.message}</p>}
+              {errors.username && (
+                <p className="text-sm text-red-500">
+                  {errors.username.message}
+                </p>
+              )}
             </div>
 
             <div className="relative">
@@ -111,23 +122,38 @@ export default function SignIn() {
                 className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
               </button>
-              {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
+              {errors.password && (
+                <p className="text-sm text-red-500">
+                  {errors.password.message}
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-between text-sm">
-              <a href="/changepassword" className="text-blue-600 hover:underline">
+              <a
+                href="/changepassword"
+                className="text-blue-600 hover:underline"
+              >
                 Esqueceu sua senha?
               </a>
             </div>
 
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              disabled={isLoading}
+            >
               {isLoading ? "Carregando..." : "Entrar"}
             </Button>
           </form>
 
-          <div className="text-center mt-4 text-sm">
+          <div className="mt-4 text-center text-sm">
             <span>Ainda não possui uma conta?</span>
             <a href="/signup" className="text-blue-600 hover:underline">
               <span> Cadastre-se</span>

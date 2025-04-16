@@ -43,7 +43,10 @@ export async function POST(request: Request) {
     );
 
     // Retorna o token para o frontend
-    return NextResponse.json({ token }, { status: 200 });
+    return NextResponse.json(
+      { token, user: { name: user.name } },
+      { status: 200 },
+    );
   } catch (error) {
     console.error(error);
     return NextResponse.json(
