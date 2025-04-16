@@ -1,4 +1,5 @@
 import { PaymentMethodType } from "@prisma/client";
+import { addDays, isWithinInterval } from "date-fns";
 import { NextResponse } from "next/server";
 
 import { parseBrazilianDate } from "@/app/functions/backend/parse-brazilian-date";
@@ -107,10 +108,52 @@ export async function PUT(request: Request) {
         const grossTotal = totalHostings + totalTickets;
         const ticketDiscount = parseBrazilianNumber(body.ticketDiscount);
         const hostingDiscount = parseBrazilianNumber(body.hostingDiscount);
-        const totalDiscount = ticketDiscount + hostingDiscount;
-        const netTotal = grossTotal - totalDiscount;
+        const initialDiscount = ticketDiscount + hostingDiscount;
 
-        // 4. Recalcular comissões
+        // 4. Buscar cashbacks aplicados anteriormente (USED)
+        const appliedCashbacks = await prisma.saleCashback.findMany({
+          where: {
+            saleId: body.id,
+            status: "USED",
+          },
+          include: {
+            cashback: true,
+          },
+        });
+
+        // Calcular valor líquido antes de aplicar cashbacks
+        const netTotalBeforeCashback = grossTotal - initialDiscount;
+
+        // 5. Calcular cashback aplicado (mantém o mesmo valor ou ajusta se necessário)
+        let totalCashback = appliedCashbacks.reduce(
+          (sum, cb) => sum + cb.amount,
+          0,
+        );
+
+        // Se o valor líquido diminuiu, ajustar o cashback aplicado
+        if (totalCashback > netTotalBeforeCashback) {
+          totalCashback = netTotalBeforeCashback;
+
+          // Atualizar cashbacks aplicados (se houver)
+          if (appliedCashbacks.length > 0) {
+            // Ajusta proporcionalmente cada cashback aplicado
+            const adjustmentFactor = netTotalBeforeCashback / totalCashback;
+
+            for (const cb of appliedCashbacks) {
+              await prisma.saleCashback.update({
+                where: { id: cb.id },
+                data: {
+                  amount: cb.amount * adjustmentFactor,
+                },
+              });
+            }
+          }
+        }
+
+        // Calcular valor líquido final
+        const netTotal = netTotalBeforeCashback - totalCashback;
+
+        // 6. Recalcular comissões
         const sallerCommission = await prisma.sallerCommission.findFirst({
           where: {
             sallerId: body.sallerId,
@@ -154,11 +197,11 @@ export async function PUT(request: Request) {
         const agencyCommissionValue =
           agencyCommissionValueHosting + agencyCommissionValueTicket;
 
-        // 5. Atualizar a venda principal
+        // 7. Atualizar a venda principal
         const updatedSale = await prisma.sale.update({
           where: { id: body.id },
           data: {
-            idInTourOperator: body.idInTourOperator,
+            idInTourOperator: Number(body.idInTourOperator),
             sallerId: body.sallerId,
             tourOperatorId: body.tourOperatorId,
             clientId: body.clientId,
@@ -171,14 +214,15 @@ export async function PUT(request: Request) {
             observation: body.observation,
             canceledSale: body.canceledSale || false,
             grossTotal,
-            totalDiscount,
+            totalCashback,
+            totalDiscount: initialDiscount + totalCashback,
             netTotal,
             sallerCommissionValue,
             agencyCommissionValue,
           },
         });
 
-        // 6. Atualizar relacionamentos
+        // 8. Atualizar relacionamentos
         await prisma.saleCompanion.deleteMany({ where: { saleId: body.id } });
         if (body.companions?.length) {
           await prisma.saleCompanion.createMany({
@@ -216,115 +260,101 @@ export async function PUT(request: Request) {
           });
         }
 
-        // 7. Lógica de Cashback - Parte 1: Atualizar validade se datas mudaram
-        let totalCashback = existingSale.totalCashback || 0;
+        // 9. Lógica de Cashback Ativo (futuro)
         let saleCashback = existingSale.saleCashback;
+        const currentDate = new Date();
 
-        if (existingSale.saleCashback && dateChanged) {
-          const cashback = await prisma.cashback.findUnique({
-            where: { id: existingSale.saleCashback.cashbackId },
+        // Verificar se precisa atualizar o cashback ativo
+        const valuesChanged =
+          grossTotal !== existingSale.grossTotal ||
+          ticketDiscount !== existingSale.ticketDiscount ||
+          hostingDiscount !== existingSale.hostingDiscount;
+
+        if (
+          (dateChanged || valuesChanged) &&
+          saleCashback?.status === "ACTIVE"
+        ) {
+          // Verificar validade do cashback existente
+          const currentCashback = await prisma.cashback.findUnique({
+            where: { id: saleCashback.cashbackId },
           });
 
-          if (cashback) {
-            let startDate: Date;
-            switch (cashback.selectType) {
-              case "PURCHASEDATE":
-                startDate = parseBrazilianDate(body.saleDate);
-                break;
-              case "CHECKIN":
-                startDate = parseBrazilianDate(body.checkIn);
-                break;
-              case "CHECKOUT":
-                startDate = parseBrazilianDate(body.checkOut);
-                break;
-              default:
-                startDate = parseBrazilianDate(body.saleDate);
-            }
-
-            const expiryDate = new Date(startDate);
-            expiryDate.setDate(expiryDate.getDate() + cashback.validityDays);
-            expiryDate.setHours(23, 59, 59, 999);
-
-            saleCashback = await prisma.saleCashback.update({
-              where: { id: existingSale.saleCashback.id },
-              data: {
-                expiryDate,
-              },
+          if (
+            !currentCashback ||
+            !isWithinInterval(currentDate, {
+              start: currentCashback.startDate,
+              end: currentCashback.endDate,
+            })
+          ) {
+            // Remover cashback se a campanha expirou
+            await prisma.saleCashback.delete({
+              where: { id: saleCashback.id },
             });
+            saleCashback = null;
           }
         }
 
-        // 8. Lógica de Cashback - Parte 2: Adicionar/Remover cashback
-        const cashbackChanged =
-          body.cashbackId !== existingSale.saleCashback?.cashbackId ||
-          body.paymentMethod !== existingSale.paymentMethod ||
-          grossTotal !== existingSale.grossTotal;
-
-        if (body.cashbackId && cashbackChanged) {
-          const cashback = await prisma.cashback.findUnique({
-            where: { id: body.cashbackId },
-          });
-
-          if (cashback) {
-            let startDate: Date;
-            switch (cashback.selectType) {
-              case "PURCHASEDATE":
-                startDate = parseBrazilianDate(body.saleDate);
-                break;
-              case "CHECKIN":
-                startDate = parseBrazilianDate(body.checkIn);
-                break;
-              case "CHECKOUT":
-                startDate = parseBrazilianDate(body.checkOut);
-                break;
-              default:
-                startDate = parseBrazilianDate(body.saleDate);
-            }
-
-            const expiryDate = new Date(startDate);
-            expiryDate.setDate(expiryDate.getDate() + cashback.validityDays);
-            expiryDate.setHours(23, 59, 59, 999);
-
-            totalCashback = netTotal * (cashback.percentage / 100);
-
-            if (existingSale.saleCashback) {
-              saleCashback = await prisma.saleCashback.update({
-                where: { id: existingSale.saleCashback.id },
-                data: {
-                  cashbackId: cashback.id,
-                  amount: totalCashback,
-                  expiryDate,
-                },
-              });
-            } else {
-              saleCashback = await prisma.saleCashback.create({
-                data: {
-                  saleId: body.id,
-                  cashbackId: cashback.id,
-                  status: "ACTIVE",
-                  amount: totalCashback,
-                  expiryDate,
-                },
-              });
-            }
-          }
-        } else if (!body.cashbackId && existingSale.saleCashback) {
-          await prisma.saleCashback.delete({
-            where: { id: existingSale.saleCashback.id },
-          });
-          saleCashback = null;
-          totalCashback = 0;
-        }
-
-        // Atualizar totalCashback na venda
-        await prisma.sale.update({
-          where: { id: body.id },
-          data: {
-            totalCashback,
+        // Buscar campanha ativa válida
+        const activeCashback = await prisma.cashback.findFirst({
+          where: {
+            startDate: { lte: currentDate },
+            endDate: { gte: currentDate },
           },
+          orderBy: { percentage: "desc" },
         });
 
-        // 9. Atualizar nota fiscal
+        // Verificar se precisa criar/atualizar cashback ativo
+        if (
+          activeCashback &&
+          (!saleCashback ||
+            dateChanged ||
+            valuesChanged ||
+            (saleCashback && saleCashback.cashbackId !== activeCashback.id))
+        ) {
+          // Se já existe um cashback ativo, remover antes de criar novo
+          if (saleCashback?.status === "ACTIVE") {
+            await prisma.saleCashback.delete({
+              where: { id: saleCashback.id },
+            });
+          }
+
+          // Calcular datas do novo cashback
+          let startDate: Date;
+          switch (activeCashback.selectType) {
+            case "PURCHASEDATE":
+              startDate = parseBrazilianDate(body.saleDate);
+              break;
+            case "CHECKIN":
+              startDate = parseBrazilianDate(body.checkIn);
+              break;
+            case "CHECKOUT":
+              startDate = parseBrazilianDate(body.checkOut);
+              break;
+            default:
+              startDate = parseBrazilianDate(body.saleDate);
+          }
+
+          const expiryDate = addDays(
+            new Date(startDate.setHours(23, 59, 59, 999)),
+            activeCashback.validityDays,
+          );
+
+          // Calcular valor do cashback baseado no líquido
+          const cashbackAmount = netTotal * (activeCashback.percentage / 100);
+
+          // Criar novo cashback
+          saleCashback = await prisma.saleCashback.create({
+            data: {
+              saleId: body.id,
+              cashbackId: activeCashback.id,
+              status: "ACTIVE",
+              amount: cashbackAmount,
+              expiryDate,
+            },
+          });
+        }
+
+        // 10. Atualizar nota fiscal
         const invoice = await prisma.invoice.upsert({
           where: { saleId: body.id },
           update: {
@@ -368,6 +398,7 @@ export async function PUT(request: Request) {
           ...updatedSale,
           saleCashback,
           invoice,
+          appliedCashbacks: appliedCashbacks.length > 0 ? appliedCashbacks : [],
         };
       },
       {

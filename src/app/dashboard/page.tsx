@@ -135,10 +135,6 @@ export default function Dashboard() {
 
   const itemsPerPage = 10;
 
-  if (!isAuthenticated || loading) {
-    return <Loader />;
-  }
-
   const getNestedValue = (obj: Sale, path: string): unknown => {
     return path.split(".").reduce((acc: unknown, part: string) => {
       if (
@@ -214,6 +210,10 @@ export default function Dashboard() {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredSales.slice(indexOfFirstItem, indexOfLastItem);
+
+  if (!isAuthenticated || loading) {
+    return <Loader />;
+  }
 
   return (
     <div className="flex">
