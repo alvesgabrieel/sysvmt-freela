@@ -2,22 +2,24 @@
 
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import { use } from "react"; // Adicione esta importação
 
 import ChangePasswordForm from "@/app/components/change-password-form";
 
+// Atualize a interface para corresponder à nova API do Next.js
 interface TokenPageProps {
-  params: {
-    token?: string[];
-  };
-  searchParams: {
-    email?: string;
-  };
+  params: Promise<{ token?: string[] }>;
+  searchParams: Promise<{ email?: string }>;
 }
 
 export default function TokenPage({ params, searchParams }: TokenPageProps) {
+  const unwrappedParams = use(params);
+  const unwrappedSearchParams = use(searchParams);
+
   const searchParamsHook = useSearchParams();
-  const token = searchParamsHook.get("token") || params.token?.[0];
-  const email = searchParams.email || "";
+  const token = searchParamsHook.get("token") || unwrappedParams.token?.[0];
+  const email =
+    unwrappedSearchParams.email || searchParamsHook.get("email") || "";
 
   const router = useRouter();
 
