@@ -6,13 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ChangePasswordForm from "@/app/components/change-password-form";
 
 interface TokenPageProps {
-  params: { token?: string[] };
+  params: { token: string[] };
   searchParams: { email?: string };
 }
 
 export default function TokenPage({ params, searchParams }: TokenPageProps) {
   const searchParamsHook = useSearchParams();
-  const token = searchParamsHook.get("token") || params.token?.[0] || null;
+  const token = searchParamsHook.get("token") || params.token[0] || null;
   const email = searchParams.email || "";
 
   const router = useRouter(); // Usando o hook useRouter corretamente
