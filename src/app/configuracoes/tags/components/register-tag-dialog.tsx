@@ -65,7 +65,7 @@ const RegisterTagDialog: React.FC<RegisterTagDialogProps> = ({
       </DialogTrigger>
       <DialogContent className="max-w-[500px] sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Cadastrar tag</DialogTitle>
+          <DialogTitle>Cadastrar tagg</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-4">

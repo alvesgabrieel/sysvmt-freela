@@ -34,17 +34,18 @@ const Tags = () => {
   const [selectedTag, setSelectedTag] = useState<Tag | null>(null);
 
   const [initialLoading, setInitialLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Função para abrir o diálogo de edição
   const handleViewMore = (tag: Tag) => {
-    setSelectedTag(tag); // Define o ingresso selecionado
-    setIsEditDialogOpen(true); // Abre o diálogo
+    setSelectedTag(tag);
+    setIsEditDialogOpen(true);
   };
 
   // Função para fechar o diálogo e limpar o estado
   const handleCloseDialog = () => {
-    setIsEditDialogOpen(false); // Fecha o diálogo
-    setSelectedTag(null); // Limpa o ingresso selecionado
+    setIsEditDialogOpen(false);
+    setSelectedTag(null);
   };
 
   // Função para salvar as alterações
@@ -67,6 +68,7 @@ const Tags = () => {
   useEffect(() => {
     const fetchTags = async () => {
       try {
+        setIsLoading(true);
         const response = await fetch("/api/tag/read");
         if (response.ok) {
           const result = await response.json();
@@ -79,6 +81,7 @@ const Tags = () => {
         console.error("Erro ao carregar as tags", Err);
       } finally {
         setInitialLoading(false);
+        setIsLoading(false);
       }
     };
     fetchTags();
@@ -126,7 +129,9 @@ const Tags = () => {
         <RegisterTagDialog onTagCreated={handleTagCreated} />
 
         {/* Tabela de Tags */}
-        {tags.length > 0 ? (
+        {isLoading ? (
+          <Loader fullScreen={false} />
+        ) : tags.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -166,7 +171,9 @@ const Tags = () => {
             </TableBody>
           </Table>
         ) : (
-          <Loader fullScreen={false} />
+          <div className="text-muted-foreground flex h-32 items-center justify-center">
+            Nenhuma tag encontrada
+          </div>
         )}
 
         {selectedTag && (
