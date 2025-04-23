@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -136,12 +137,12 @@ export default function SignIn() {
             </div>
 
             <div className="flex items-center justify-between text-sm">
-              <a
+              <Link
                 href="/changepassword/request"
                 className="text-blue-600 hover:underline"
               >
                 Esqueceu sua senha?
-              </a>
+              </Link>
             </div>
 
             <Button
