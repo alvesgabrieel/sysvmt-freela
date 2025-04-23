@@ -74,7 +74,7 @@ const Tags = () => {
           const result = await response.json();
           setTags(result.tags);
         } else {
-          toast.error("Erro ao carregar as tags");
+          toast.error("Erro ao carregar");
         }
       } catch (Err) {
         toast.error("Erro ao carregar as tags");
