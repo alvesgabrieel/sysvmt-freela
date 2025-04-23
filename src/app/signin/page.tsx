@@ -54,7 +54,7 @@ export default function SignIn() {
     setIsLoading(true);
 
     try {
-      const loginResponse = await fetch("/api/login", {
+      const loginResponse = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -137,7 +137,7 @@ export default function SignIn() {
 
             <div className="flex items-center justify-between text-sm">
               <a
-                href="/changepassword"
+                href="/changepassword/request"
                 className="text-blue-600 hover:underline"
               >
                 Esqueceu sua senha?
