@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import Loader from "@/app/components/loader";
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
 import { formatBackendDateToFrontend } from "@/app/functions/frontend/format-backend-date-to-frontend";
@@ -38,11 +39,30 @@ const Cashback = () => {
   const [filters, setFilters] = useState({ saleId: "", clientName: "" });
   const [salesData, setSalesData] = useState<Sale[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  // const [refreshKey, setRefreshKey] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const itemsPerPage = 5;
 
-  const fetchSales = async () => {
+  // Busca inicial (todos os registros)
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch("/api/cashback/filter-cashback-for-sale");
+        if (!response.ok) throw new Error("Erro ao buscar os dados");
+        const data: Sale[] = await response.json();
+        setSalesData(data);
+      } catch (error) {
+        console.error("Erro ao buscar vendas:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, []); // Executa apenas na montagem do componente
+
+  // Função de busca com filtros (executada apenas no clique do botão)
+  const fetchSalesWithFilters = async () => {
     setIsLoading(true);
     try {
       const queryParams = new URLSearchParams();
@@ -57,22 +77,13 @@ const Cashback = () => {
 
       const data: Sale[] = await response.json();
       setSalesData(data);
+      setCurrentPage(1); // Resetar paginação
     } catch (error) {
       console.error("Erro ao buscar vendas:", error);
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchSales();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
-
-  // const refreshData = () => {
-  //   setRefreshKey((prev) => prev + 1);
-  // };
-
   const totalPages = Math.ceil(salesData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentSales = salesData.slice(startIndex, startIndex + itemsPerPage);
@@ -115,7 +126,7 @@ const Cashback = () => {
                 setFilters({ ...filters, clientName: e.target.value })
               }
             />
-            <Button onClick={fetchSales} disabled={isLoading}>
+            <Button onClick={fetchSalesWithFilters} disabled={isLoading}>
               {isLoading ? "Buscando..." : "Pesquisar"}
             </Button>
             {/* <Button
@@ -136,7 +147,7 @@ const Cashback = () => {
           <CardContent>
             {isLoading ? (
               <div className="flex justify-center py-8">
-                <div className="border-primary h-12 w-12 animate-spin rounded-full border-b-2 border-t-2"></div>
+                <Loader fullScreen={false} />
               </div>
             ) : (
               <>
@@ -145,8 +156,8 @@ const Cashback = () => {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Cliente</TableHead>
-                      <TableHead>Valor Cashback</TableHead>
-                      <TableHead>Total Cashback</TableHead>
+                      <TableHead>Valor do cashback</TableHead>
+                      {/* <TableHead>Valor utilizado</TableHead> */}
                       <TableHead>Data Venda</TableHead>
                       <TableHead>Validade</TableHead>
                       <TableHead>Status</TableHead>
@@ -159,9 +170,9 @@ const Cashback = () => {
                           <TableCell>{sale.saleId}</TableCell>
                           <TableCell>{sale.clientName}</TableCell>
                           <TableCell>{formatCurrency(sale.amount)}</TableCell>
-                          <TableCell>
+                          {/* <TableCell>
                             {formatCurrency(sale.totalCashback)}
-                          </TableCell>
+                          </TableCell> */}
                           <TableCell>
                             {formatBackendDateToFrontend(sale.saleDate)}
                           </TableCell>

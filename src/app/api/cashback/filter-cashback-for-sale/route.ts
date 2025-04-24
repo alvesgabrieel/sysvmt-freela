@@ -49,6 +49,9 @@ export async function GET(req: Request) {
           },
         },
       },
+      orderBy: {
+        id: "desc",
+      },
     });
 
     // Filtra apenas resultados onde saleCashback existe
