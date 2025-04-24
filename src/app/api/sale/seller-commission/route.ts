@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
         tourOperator: true,
       },
       orderBy: {
-        saleDate: "desc",
+        id: "desc",
       },
     });
 

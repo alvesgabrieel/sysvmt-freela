@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
         tourOperator: true,
       },
       orderBy: {
-        saleDate: "desc", // Ordena por data mais recente primeiro
+        id: "desc", // Ordena por data mais recente primeiro
       },
     });
 
