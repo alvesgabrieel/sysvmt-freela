@@ -184,7 +184,7 @@ export const EditTourOperatorDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="w-full !max-w-6xl">
         <DialogHeader>
           <DialogTitle>Editar operadora</DialogTitle>
         </DialogHeader>

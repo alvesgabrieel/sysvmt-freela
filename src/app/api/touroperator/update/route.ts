@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-// import { parseBrazilianNumber } from "@/app/functions/backend/parse-brazilian-number";
+import { parseBrazilianNumber } from "@/app/functions/backend/parse-brazilian-number";
 import { db } from "@/lib/prisma";
 
 export async function PUT(request: Request) {
@@ -22,6 +22,19 @@ export async function PUT(request: Request) {
     // const installmentComission = parseBrazilianNumber(
     //   data.installmentComission,
     // );
+    const hostingCommissionInstallment = parseBrazilianNumber(
+      data.hostingCommissionInstallment,
+    );
+    const hostingCommissionUpfront = parseBrazilianNumber(
+      data.hostingCommissionUpfront,
+    );
+    const ticketCommissionInstallment = parseBrazilianNumber(
+      data.ticketCommissionInstallment,
+    );
+    const ticketCommissionUpfront = parseBrazilianNumber(
+      data.ticketCommissionUpfront,
+    );
+    console.log("Dados recebidos:", data);
 
     const updatedTourOperator = await db.tourOperator.update({
       where: { id: Number(id) },
@@ -36,6 +49,10 @@ export async function PUT(request: Request) {
         // upfrontComission,
         // installmentComission,
         observation: data.observation,
+        hostingCommissionInstallment,
+        hostingCommissionUpfront,
+        ticketCommissionInstallment,
+        ticketCommissionUpfront,
       },
     });
 
