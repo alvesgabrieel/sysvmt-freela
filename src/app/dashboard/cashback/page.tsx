@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import Sidebar from "@/app/components/sidebar";
 import TopBar from "@/app/components/top-bar";
+import { formatBackendDateToFrontend } from "@/app/functions/frontend/format-backend-date-to-frontend";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -161,7 +162,9 @@ const Cashback = () => {
                           <TableCell>
                             {formatCurrency(sale.totalCashback)}
                           </TableCell>
-                          <TableCell>{formatDate(sale.saleDate)}</TableCell>
+                          <TableCell>
+                            {formatBackendDateToFrontend(sale.saleDate)}
+                          </TableCell>
                           <TableCell>{formatDate(sale.expiryDate)}</TableCell>
                           <TableCell>
                             <span
