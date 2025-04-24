@@ -148,17 +148,19 @@ export const EditClientDialog = ({
         },
         body: JSON.stringify({
           ...editedClient,
-          dateOfBirth: editedClient.dateOfBirth,
-          primaryPhone: editedClient.primaryPhone,
-          secondaryPhone: editedClient.secondaryPhone,
-          cpf: editedClient.cpf,
-          tags: selectedTags, // Inclui as tags selecionadas
+          tags: selectedTags,
         }),
       });
 
       if (response.ok) {
         const updatedClient = await response.json();
-        onSave(updatedClient);
+        // Garante que todos os campos estão presentes
+        const completeClient = {
+          ...editedClient,
+          ...updatedClient,
+          tags: tags.filter((tag) => selectedTags.includes(tag.id)),
+        };
+        onSave(completeClient);
         onClose();
         toast.success("Registro atualizado com sucesso");
       } else {

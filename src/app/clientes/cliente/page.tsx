@@ -90,11 +90,14 @@ const Cliente = () => {
 
   // Função para salvar as alterações
   const handleSaveClient = (updatedClient: Client) => {
-    setClient((prevClient) =>
-      prevClient.map((client) =>
-        client.id === updatedClient.id ? updatedClient : client,
-      ),
-    );
+    setClient((prevClient) => {
+      const index = prevClient.findIndex((c) => c.id === updatedClient.id);
+      if (index === -1) return prevClient;
+
+      const newClients = [...prevClient];
+      newClients[index] = updatedClient;
+      return newClients;
+    });
   };
 
   const handleAddClient = (newClient: Client) => {
