@@ -271,6 +271,8 @@ const RegisterSallerDialog: React.FC<RegisterSallerDialogProps> = ({
       console.error("Erro ao enviar dados:", error);
       toast.error("Erro ao conectar com o servidor");
       setIsLoading(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
