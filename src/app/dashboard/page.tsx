@@ -442,6 +442,14 @@ export default function Dashboard() {
             setSelectedSale(null);
           }}
           sale={selectedSale}
+          onUpdateSuccess={(updatedSale) => {
+            // Atualize o estado das vendas
+            setSales((prevSales) =>
+              prevSales.map((sale) =>
+                sale.id === updatedSale.id ? updatedSale : sale,
+              ),
+            );
+          }}
         />
       </div>
     </div>

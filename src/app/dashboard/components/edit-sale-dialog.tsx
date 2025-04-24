@@ -25,12 +25,14 @@ interface EditSaleDialogProps {
   open: boolean;
   onClose: () => void;
   sale: Sale | null;
+  onUpdateSuccess?: (updatedSale: Sale) => void;
 }
 
 export default function EditSaleDialog({
   open,
   onClose,
   sale,
+  onUpdateSuccess,
 }: EditSaleDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("gerais");
@@ -324,6 +326,14 @@ export default function EditSaleDialog({
       }
 
       toast.success("Venda atualizada com sucesso!");
+
+      // Chame o callback com os dados atualizados
+      if (onUpdateSuccess && editedSale.id) {
+        // Você pode querer buscar os dados atualizados do servidor aqui
+        // ou formatar os dados locais para enviar de volta
+        onUpdateSuccess(editedSale as Sale);
+      }
+
       onClose();
     } catch (error) {
       console.error("Erro ao atualizar venda:", error);
