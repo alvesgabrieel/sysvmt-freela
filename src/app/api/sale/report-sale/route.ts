@@ -61,12 +61,12 @@ const formatarPrecoBR = (valor: number): string => {
   });
 };
 
-const formatarTextoFiltro = (
-  texto: string | number | null | undefined,
-): string => {
-  if (texto === null || texto === undefined) return "Não especificado";
-  return texto.toString().trim();
-};
+// const formatarTextoFiltro = (
+//   texto: string | number | null | undefined,
+// ): string => {
+//   if (texto === null || texto === undefined) return "Não especificado";
+//   return texto.toString().trim();
+// };
 
 // ============= GERADOR DE PDF =============
 export async function POST(request: Request) {
@@ -114,7 +114,27 @@ export async function POST(request: Request) {
       .text("Filtros aplicados:", { underline: true })
       .moveDown(0.5);
 
-    const filtrosParaExibir = [
+    const formatarValorFiltro = (
+      valor: string | number | null | undefined | boolean,
+    ): string => {
+      if (valor === null || valor === undefined || valor === "") {
+        return "Não especificado";
+      }
+
+      if (typeof valor === "string" && valor.includes("-")) {
+        const [dataInicio, dataFim] = valor.split(" - ");
+        return `${formatarDataFiltroBR(dataInicio)} - ${formatarDataFiltroBR(dataFim)}`;
+      }
+
+      return valor.toString().trim();
+    };
+
+    interface Filtro {
+      label: string;
+      value: string | number | null | undefined | boolean;
+    }
+
+    const filtrosParaExibir: Filtro[] = [
       {
         label: "Período da venda",
         value:
@@ -136,26 +156,22 @@ export async function POST(request: Request) {
             ? `${filters.checkOutFrom} - ${filters.checkOutTo}`
             : null,
       },
-      { label: "Operadora", value: filters.tourOperator },
-      { label: "Ingresso", value: filters.ticket },
-      { label: "Hospedagem", value: filters.hosting },
+      {
+        label: "Operadora",
+        value: filters.tourOperator,
+      },
+      {
+        label: "Ingresso",
+        value: filters.ticket,
+      },
+      {
+        label: "Hospedagem",
+        value: filters.hosting,
+      },
     ];
 
     filtrosParaExibir.forEach((filtro) => {
-      let valorFormatado;
-
-      if (
-        filtro.value &&
-        typeof filtro.value === "string" &&
-        filtro.value.includes("-")
-      ) {
-        // Formata intervalos de data
-        const [dataInicio, dataFim] = filtro.value.split(" - ");
-        valorFormatado = `${formatarDataFiltroBR(dataInicio)} - ${formatarDataFiltroBR(dataFim)}`;
-      } else {
-        valorFormatado = formatarTextoFiltro(filtro.value);
-      }
-
+      const valorFormatado = formatarValorFiltro(filtro.value);
       doc.fontSize(10).text(`• ${filtro.label}: ${valorFormatado}`);
     });
 
@@ -171,7 +187,7 @@ export async function POST(request: Request) {
     const columns = [
       { header: "ID", width: 30 },
       { header: "Cliente", width: 80 },
-      { header: "Operadora", width: 60 },
+      { header: "Operadora", width: 100 },
       { header: "Check-in", width: 60 },
       { header: "Check-out", width: 60 },
       { header: "Total", width: 60 },
@@ -245,7 +261,7 @@ export async function POST(request: Request) {
               (sale.client.name.length > 15 ? "..." : "");
             break;
           case 2:
-            cellText = sale.tourOperator?.name?.substring(0, 10) || "-";
+            cellText = sale.tourOperator?.name || "-";
             break;
           case 3:
             cellText = formatarDataBR(sale.checkIn);
