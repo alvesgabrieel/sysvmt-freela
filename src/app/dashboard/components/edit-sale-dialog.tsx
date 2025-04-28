@@ -422,6 +422,28 @@ export default function EditSaleDialog({
     };
   };
 
+  // Adicione esta função no início do componente (junto com as outras funções de formatação)
+  const handleCurrencyChangeInput = (
+    field: keyof typeof editedSale,
+    value: string,
+  ) => {
+    if (value === "") {
+      setEditedSale((prev) => ({
+        ...prev,
+        [field]: "",
+      }));
+      return;
+    }
+
+    const digits = value.replace(/\D/g, "");
+    const formatted = formatCurrencyForInput(digits);
+
+    setEditedSale((prev) => ({
+      ...prev,
+      [field]: formatted,
+    }));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
@@ -612,30 +634,52 @@ export default function EditSaleDialog({
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Desconto Ingressos</Label>
-                <Input
-                  className="col-span-3"
-                  value={editedSale.ticketDiscount || ""}
-                  onChange={(e) =>
-                    setEditedSale({
-                      ...editedSale,
-                      ticketDiscount: e.target.value,
-                    })
-                  }
-                />
+                <div className="relative col-span-3">
+                  <Input
+                    // Adiciona padding para o símbolo
+                    value={editedSale.ticketDiscount || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const value = e.target.value.replace(/[^\d,]/g, "");
+                      handleCurrencyChangeInput("ticketDiscount", value);
+                    }}
+                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                      if (!e.target.value.includes(",")) {
+                        const formatted = formatCurrencyForInput(
+                          e.target.value + "00",
+                        );
+                        setEditedSale({
+                          ...editedSale,
+                          ticketDiscount: formatted,
+                        });
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Desconto Hospedagem</Label>
-                <Input
-                  className="col-span-3"
-                  value={editedSale.hostingDiscount || ""}
-                  onChange={(e) =>
-                    setEditedSale({
-                      ...editedSale,
-                      hostingDiscount: e.target.value,
-                    })
-                  }
-                />
+                <div className="relative col-span-3">
+                  <Input
+                    // Adiciona padding para o símbolo
+                    value={editedSale.hostingDiscount || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const value = e.target.value.replace(/[^\d,]/g, "");
+                      handleCurrencyChangeInput("hostingDiscount", value);
+                    }}
+                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                      if (!e.target.value.includes(",")) {
+                        const formatted = formatCurrencyForInput(
+                          e.target.value + "00",
+                        );
+                        setEditedSale({
+                          ...editedSale,
+                          hostingDiscount: formatted,
+                        });
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-4 gap-4">
