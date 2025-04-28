@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const TopBar: React.FC = () => {
   const [userName, setUserName] = useState<string>("Usuário");
@@ -16,7 +16,6 @@ const TopBar: React.FC = () => {
     <div className="relative flex items-center justify-end rounded-lg bg-white p-4 shadow">
       <div className="flex items-center gap-4">
         <Avatar>
-          <AvatarImage src="/avatar.jpg" alt="User" />
           <AvatarFallback>
             {userName
               .split(" ")
