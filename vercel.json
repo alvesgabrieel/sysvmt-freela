@@ -2,8 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/expire-cashbacks",
-      "schedule": "0 0 * * *",
-      "timezone": "America/Sao_Paulo"
+      "schedule": "0 3 * * *"
     }
   ]
 }
