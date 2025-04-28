@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import Loader from "@/app/components/loader";
@@ -47,9 +47,8 @@ const ComissoesVendedor = () => {
   const [erro, setErro] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
-  // Busca automática ao carregar o componente
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -97,14 +96,12 @@ const ComissoesVendedor = () => {
     }
   };
 
-  // Calcular dados paginados
   const totalPages = Math.ceil(comissoes.length / itemsPerPage);
   const paginatedData = comissoes.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
 
-  // Funções de navegação
   const goToPreviousPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
   };
@@ -128,10 +125,8 @@ const ComissoesVendedor = () => {
     <div className="flex">
       <Sidebar />
       <div className="flex-1 space-y-6 p-6">
-        {/* Barra de cima */}
         <TopBar />
 
-        {/* Filtros */}
         <Card>
           <CardHeader>
             <CardTitle>Comissões de Vendedor - Filtros</CardTitle>
@@ -196,14 +191,12 @@ const ComissoesVendedor = () => {
           </CardContent>
         </Card>
 
-        {/* Mensagem de erro */}
         {erro && (
           <Card>
             <CardContent className="p-4 text-red-500">{erro}</CardContent>
           </Card>
         )}
 
-        {/* Resultados em Tabela */}
         {comissoes.length > 0 && (
           <Card>
             <CardHeader>
@@ -254,24 +247,25 @@ const ComissoesVendedor = () => {
                 </TableBody>
               </Table>
 
-              {/* Controles de Paginação */}
+              {/* Paginação atualizada */}
               {totalPages > 1 && (
-                <div className="mt-4 flex justify-end gap-2">
+                <div className="mt-4 flex items-center justify-between">
                   <Button
                     variant="outline"
-                    size="sm"
                     onClick={goToPreviousPage}
                     disabled={currentPage === 1}
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeftIcon className="h-5 w-5" />
                   </Button>
+                  <span>
+                    Página {currentPage} de {totalPages}
+                  </span>
                   <Button
                     variant="outline"
-                    size="sm"
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRightIcon className="h-5 w-5" />
                   </Button>
                 </div>
               )}

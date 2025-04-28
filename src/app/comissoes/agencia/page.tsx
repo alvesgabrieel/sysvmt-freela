@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react"; // Importe os ícones
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import Loader from "@/app/components/loader";
@@ -18,7 +18,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"; // Importe os componentes da tabela
+} from "@/components/ui/table";
 
 interface ComissaoAgencia {
   id: number;
@@ -47,9 +47,8 @@ const ComissoesAgencia = () => {
   const [erro, setErro] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
-  // Busca automática ao carregar o componente
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -69,7 +68,6 @@ const ComissoesAgencia = () => {
     setComissoes([]);
 
     try {
-      // Construir query string com os filtros preenchidos
       const params = new URLSearchParams();
 
       if (filters.idVenda) params.append("saleId", filters.idVenda);
@@ -88,7 +86,6 @@ const ComissoesAgencia = () => {
       }
 
       const data = await res.json();
-      // A API pode retornar um único objeto ou um array
       setComissoes(Array.isArray(data) ? data : [data]);
     } catch (error) {
       setErro(
@@ -99,14 +96,12 @@ const ComissoesAgencia = () => {
     }
   };
 
-  // Calcular dados paginados
   const totalPages = Math.ceil(comissoes.length / itemsPerPage);
   const paginatedData = comissoes.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
 
-  // Funções de navegação
   const goToPreviousPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
   };
@@ -130,10 +125,8 @@ const ComissoesAgencia = () => {
     <div className="flex">
       <Sidebar />
       <div className="flex-1 space-y-6 p-6">
-        {/* Barra de cima */}
         <TopBar />
 
-        {/* Filtros */}
         <Card>
           <CardHeader>
             <CardTitle>Comissões Agência - Filtros</CardTitle>
@@ -194,14 +187,12 @@ const ComissoesAgencia = () => {
           </CardContent>
         </Card>
 
-        {/* Mensagem de erro */}
         {erro && (
           <Card>
             <CardContent className="p-4 text-red-500">{erro}</CardContent>
           </Card>
         )}
 
-        {/* Resultados - AGORA EM TABELA */}
         {comissoes.length > 0 && (
           <Card>
             <CardHeader>
@@ -265,24 +256,25 @@ const ComissoesAgencia = () => {
                   ))}
                 </TableBody>
               </Table>
-              {/* Controles de Paginação */}
+
               {totalPages > 1 && (
-                <div className="mt-4 flex justify-end gap-2">
+                <div className="mt-4 flex items-center justify-between">
                   <Button
                     variant="outline"
-                    size="sm"
                     onClick={goToPreviousPage}
                     disabled={currentPage === 1}
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeftIcon className="h-5 w-5" />
                   </Button>
+                  <span>
+                    Página {currentPage} de {totalPages}
+                  </span>
                   <Button
                     variant="outline"
-                    size="sm"
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRightIcon className="h-5 w-5" />
                   </Button>
                 </div>
               )}
