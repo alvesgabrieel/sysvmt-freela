@@ -1,35 +1,32 @@
 import { subHours } from "date-fns";
-import cron from "node-cron";
 
+// Remova a importação do node-cron, não é mais necessária aqui
+// import cron from "node-cron";
 import { db } from "@/lib/prisma";
 
-const runCashbackExpirationJob = () => {
-  console.log("⏳ Iniciando job de expiração de cashbacks...");
+// Renomeie a função para refletir que ela executa a lógica diretamente
+const runCashbackExpirationLogic = async () => {
+  console.log("⏳ Executando lógica de expiração de cashbacks...");
 
-  cron.schedule("0 0 * * *", async () => {
-    console.log("🔄 Executando cron job: Expirando cashbacks vencidos...");
+  const now = subHours(new Date(), 3); // Força UTC-3 para comparação
 
-    const now = subHours(new Date(), 3); // Força UTC-3
+  try {
+    const updatedCashbacks = await db.saleCashback.updateMany({
+      where: {
+        status: "ACTIVE",
+        expiryDate: { lt: now },
+      },
+      data: { status: "EXPIRED" },
+    });
 
-    try {
-      const updatedCashbacks = await db.saleCashback.updateMany({
-        where: {
-          status: "ACTIVE",
-          expiryDate: { lt: now },
-        },
-        data: { status: "EXPIRED" },
-      });
+    console.log(`✅ ${updatedCashbacks.count} cashbacks expirados!`);
+  } catch (error) {
+    console.error("❌ Erro ao expirar cashbacks:", error);
+    // Re-throw o erro para que o handler da API possa capturá-lo e retornar 500
+    throw error;
+  }
 
-      console.log(`✅ ${updatedCashbacks.count} cashbacks expirados!`);
-    } catch (error) {
-      console.error("❌ Erro ao expirar cashbacks:", error);
-    }
-  });
-
-  console.log(
-    "✅ Job de cashback agendado para rodar todos os dias à meia-noite!",
-  );
+  console.log("✅ Lógica de expiração de cashbacks concluída!");
 };
 
-// Exportamos a função para rodar no backend
-export default runCashbackExpirationJob;
+export default runCashbackExpirationLogic; // Exporte a função com o novo nome
